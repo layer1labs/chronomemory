@@ -39,8 +39,14 @@ fn test_replay_produces_identical_state() {
     // Write some records
     {
         let mut db = Esdb::open(&esdb_path).unwrap();
-        ids.push(db.commit(Record::new(RecordKind::Requirement, "REQ-001")).unwrap());
-        ids.push(db.commit(Record::new(RecordKind::TestCase, "TEST-001")).unwrap());
+        ids.push(
+            db.commit(Record::new(RecordKind::Requirement, "REQ-001"))
+                .unwrap(),
+        );
+        ids.push(
+            db.commit(Record::new(RecordKind::TestCase, "TEST-001"))
+                .unwrap(),
+        );
         ids.push(db.commit(Record::new(RecordKind::Fact, "Fact A")).unwrap());
         assert_eq!(db.wal_seq(), 3);
     }
@@ -51,7 +57,10 @@ fn test_replay_produces_identical_state() {
     assert_eq!(db2.wal_seq(), 3);
     // Verify records exist by ID lookup
     for id in &ids {
-        assert!(db2.store.get(id).is_some(), "Record {id} missing after replay");
+        assert!(
+            db2.store.get(id).is_some(),
+            "Record {id} missing after replay"
+        );
     }
     assert_eq!(db2.store.count_total(), 3);
 }
@@ -88,7 +97,10 @@ fn test_projection_rejects_unsupported_fact() {
         destructive_approved: false,
     };
     let decision = db.project(&proposal);
-    assert!(matches!(decision, ProjectionDecision::DowngradeToHypothesis { .. }));
+    assert!(matches!(
+        decision,
+        ProjectionDecision::DowngradeToHypothesis { .. }
+    ));
 }
 
 // TEST-ESDB-005: Projection detects contradictions
@@ -103,7 +115,8 @@ fn test_projection_detects_contradictions() {
     let contra = Record::new(RecordKind::Fact, "X is false").with_confidence(0.8);
     let contra_id = contra.id;
     // Add contradiction edge
-    db.dep_graph.add_edge(contra_id, fact_id, EdgeType::Contradicts);
+    db.dep_graph
+        .add_edge(contra_id, fact_id, EdgeType::Contradicts);
 
     let proposal = Proposal {
         record: Record::new(RecordKind::Fact, "X is false")
@@ -126,7 +139,8 @@ fn test_projection_detects_contradictions() {
 #[test]
 fn test_projection_detects_duplicate_work() {
     let (_dir, mut db) = temp_esdb();
-    db.commit(Record::new(RecordKind::Action, "Deploy v1.0").with_confidence(0.9)).unwrap();
+    db.commit(Record::new(RecordKind::Action, "Deploy v1.0").with_confidence(0.9))
+        .unwrap();
 
     let dup = Record::new(RecordKind::Action, "Deploy v1.0").with_confidence(0.9);
     let proposal = Proposal {
@@ -238,8 +252,11 @@ fn test_context_pack_token_budget() {
     // Insert many records
     for i in 0..50 {
         db.commit(
-            Record::new(RecordKind::Fact, format!("Fact number {i} with some text content"))
-                .with_confidence(0.8),
+            Record::new(
+                RecordKind::Fact,
+                format!("Fact number {i} with some text content"),
+            )
+            .with_confidence(0.8),
         )
         .unwrap();
     }
@@ -321,18 +338,27 @@ fn test_record_status_transitions() {
 #[test]
 fn test_query_has_work_been_done() {
     let (_dir, mut db) = temp_esdb();
-    assert!(!chronomemory::query::has_this_work_been_done(&db.store, "Build feature X"));
+    assert!(!chronomemory::query::has_this_work_been_done(
+        &db.store,
+        "Build feature X"
+    ));
 
-    db.commit(Record::new(RecordKind::Action, "Build feature X")).unwrap();
-    assert!(chronomemory::query::has_this_work_been_done(&db.store, "Build feature X"));
+    db.commit(Record::new(RecordKind::Action, "Build feature X"))
+        .unwrap();
+    assert!(chronomemory::query::has_this_work_been_done(
+        &db.store,
+        "Build feature X"
+    ));
 }
 
 // TEST-ESDB-016: Query — what_is_known
 #[test]
 fn test_query_what_is_known() {
     let (_dir, mut db) = temp_esdb();
-    db.commit(Record::new(RecordKind::Fact, "Rust is fast")).unwrap();
-    db.commit(Record::new(RecordKind::Fact, "Python is flexible")).unwrap();
+    db.commit(Record::new(RecordKind::Fact, "Rust is fast"))
+        .unwrap();
+    db.commit(Record::new(RecordKind::Fact, "Python is flexible"))
+        .unwrap();
 
     let results = chronomemory::query::what_is_known(&db.store, "rust");
     assert_eq!(results.len(), 1);

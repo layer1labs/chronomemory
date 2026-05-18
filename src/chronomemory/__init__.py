@@ -20,11 +20,15 @@ Quick start::
 
 Spec: ESDB-Specification.md v1.0 (Layer1Labs / BitConcepts)
 """
+
 from chronomemory.bridge import (
     EsdbBridge,
     EsdbRecord,
     EsdbStatus,
 )
+from chronomemory.context_pack import ContextPack, ContextPackCompiler, ContextPackEntry
+from chronomemory.deps import DependencyEdge, DepGraph
+from chronomemory.rollback import RollbackReport, invalidate
 from chronomemory.store import (
     ChronoRecord,
     ChronoStore,
@@ -43,4 +47,14 @@ __all__ = [
     "EsdbBridge",
     "EsdbRecord",
     "EsdbStatus",
+    # Phase 2: dependency graph
+    "DepGraph",
+    "DependencyEdge",
+    # Phase 2: epistemic rollback
+    "RollbackReport",
+    "invalidate",
+    # Phase 2: context pack compiler
+    "ContextPack",
+    "ContextPackCompiler",
+    "ContextPackEntry",
 ]

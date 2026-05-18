@@ -6,6 +6,7 @@ TEST-CM-006: delete() tombstones record without physical removal.
 TEST-CM-008: migrate_from_json() is idempotent.
 TEST-CM-009: chronomemory imports without any external package installed.
 """
+
 from __future__ import annotations
 
 import json
@@ -170,10 +171,7 @@ def test_zero_external_deps() -> None:
 
     # Check 2: import succeeds with -S (site-packages disabled)
     src_dir = str(Path(__file__).parent.parent / "src")
-    code = (
-        "from chronomemory import ChronoStore, ChronoRecord, WalEvent, EsdbBridge; "
-        "print('OK')"
-    )
+    code = "from chronomemory import ChronoStore, ChronoRecord, WalEvent, EsdbBridge; print('OK')"
     env = {**os.environ, "PYTHONPATH": src_dir}
     result = subprocess.run(
         [sys.executable, "-S", "-c", code],

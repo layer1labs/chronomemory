@@ -349,7 +349,7 @@ class ChronoStore:
             "compact",
             ChronoRecord(id="__compact__", label=f"Compacted at seq={self._seq}"),
         )
-        with open(self._wal_path, "w", encoding="utf-8") as f:
+        with self._wal_path.open("w", encoding="utf-8") as f:
             f.write(sentinel.to_json_line() + "\n")
         self._last_hash = sentinel.hash
         self._seq = sentinel.seq
@@ -578,7 +578,7 @@ class ChronoStore:
         try:
             # Append mode if WAL exists, create otherwise
             mode = "a" if self._wal_path.exists() else "w"
-            with open(tmp_path, mode, encoding="utf-8") as f:
+            with tmp_path.open(mode, encoding="utf-8") as f:
                 if mode == "a":
                     # Write temp file as full WAL + new line
                     existing = (
@@ -594,10 +594,10 @@ class ChronoStore:
                     os.fsync(f.fileno())
                 except (AttributeError, OSError):
                     pass
-            os.replace(str(tmp_path), str(self._wal_path))
+            tmp_path.replace(self._wal_path)
         except Exception:  # noqa: BLE001
             # Direct append fallback (less safe but non-blocking)
-            with open(self._wal_path, "a", encoding="utf-8") as f:
+            with self._wal_path.open("a", encoding="utf-8") as f:
                 f.write(line)
         finally:
             if tmp_path.exists():
@@ -614,7 +614,80 @@ class ChronoStore:
         content = json.dumps(data, indent=2, ensure_ascii=False)
         tmp = self._snapshot_path.with_suffix(".json.tmp")
         tmp.write_text(content, encoding="utf-8")
-        os.replace(str(tmp), str(self._snapshot_path))
+        tmp.replace(self._snapshot_path)
+
+    # ------------------------------------------------------------------
+    # Phase 2 convenience methods (lazy-import to avoid circular deps)
+    # ------------------------------------------------------------------
+
+    def invalidate(
+        self,
+        record_id: str,
+        reason: str,
+        dep_graph: Any,
+    ) -> Any:
+        """Invalidate a record and cascade to dependents. See rollback.invalidate."""
+        from chronomemory.rollback import invalidate as _invalidate
+
+        return _invalidate(record_id, reason, self, dep_graph)
+
+    def record_token_metric(
+        self,
+        task_id: str,
+        context_tokens: int,
+        input_tokens: int,
+        output_tokens: int,
+        tool_calls: int = 0,
+        elapsed_ms: int = 0,
+        success: bool = True,
+        duplicates_blocked: int = 0,
+        claims_rejected: int = 0,
+    ) -> None:
+        """Write a TokenMetric WAL record. See metrics.record_token_metric."""
+        from chronomemory.metrics import record_token_metric as _rtm
+
+        _rtm(
+            self,
+            task_id,
+            context_tokens,
+            input_tokens,
+            output_tokens,
+            tool_calls=tool_calls,
+            elapsed_ms=elapsed_ms,
+            success=success,
+            duplicates_blocked=duplicates_blocked,
+            claims_rejected=claims_rejected,
+        )
+
+    def get_token_metrics(self, task_id: str) -> list[ChronoRecord]:
+        """Return TokenMetric records for task_id. See metrics.get_token_metrics."""
+        from chronomemory.metrics import get_token_metrics as _gtm
+
+        return _gtm(self, task_id)
+
+    def token_efficiency_report(self) -> dict[str, float]:
+        """Aggregate token efficiency report. See metrics.token_efficiency_report."""
+        from chronomemory.metrics import token_efficiency_report as _ter
+
+        return _ter(self)
+
+    def find_skills(self, task_label: str) -> list[ChronoRecord]:
+        """Find skill records matching task_label. See metrics.find_skills."""
+        from chronomemory.metrics import find_skills as _fs
+
+        return _fs(self, task_label)
+
+    def record_skill_run(
+        self,
+        skill_id: str,
+        success: bool,
+        tokens_used: int,
+        output: dict[str, Any],
+    ) -> None:
+        """Write a SkillRun WAL record. See metrics.record_skill_run."""
+        from chronomemory.metrics import record_skill_run as _rsr
+
+        _rsr(self, skill_id, success, tokens_used, output)
 
 
 # ---------------------------------------------------------------------------
@@ -631,4 +704,3 @@ def open_store(project_root: str | Path, *, recursion_depth: int = 0) -> ChronoS
     store = ChronoStore(project_root, recursion_depth=recursion_depth)
     store.open()
     return store
-

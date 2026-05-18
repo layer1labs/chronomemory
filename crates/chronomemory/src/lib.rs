@@ -17,7 +17,7 @@ pub mod wal;
 
 use dependency::DepGraph;
 use metrics::AggregateMetrics;
-use projection::{Proposal, ProjectionConfig};
+use projection::{ProjectionConfig, Proposal};
 use store::Store;
 use types::*;
 use wal::{EventType, WalWriter};
@@ -67,7 +67,12 @@ impl Esdb {
 
     /// Project a proposal through the projection engine.
     pub fn project(&self, proposal: &Proposal) -> ProjectionDecision {
-        projection::project(proposal, &self.store, &self.dep_graph, &self.projection_config)
+        projection::project(
+            proposal,
+            &self.store,
+            &self.dep_graph,
+            &self.projection_config,
+        )
     }
 
     /// Commit an accepted record to the ESDB (WAL + materialized state).
@@ -128,10 +133,7 @@ impl Esdb {
     }
 
     /// Compile a minimal verified context pack for a task.
-    pub fn context_pack(
-        &self,
-        request: &context_pack::ContextPackRequest,
-    ) -> ContextPackOutput {
+    pub fn context_pack(&self, request: &context_pack::ContextPackRequest) -> ContextPackOutput {
         context_pack::compile(request, &self.store, &self.dep_graph)
     }
 

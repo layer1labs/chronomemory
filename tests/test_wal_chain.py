@@ -6,6 +6,7 @@ TEST-CM-002: WAL file is valid NDJSON.
 TEST-CM-007: WAL write is atomic.
 TEST-CM-010: WAL written by one project is readable by another.
 """
+
 from __future__ import annotations
 
 import json
@@ -151,12 +152,14 @@ def test_cross_project_wal_compatibility(tmp_path: Path) -> None:
     # Write 5 records in project_a
     with ChronoStore(dir_a) as store_a:
         for i in range(5):
-            store_a.upsert(ChronoRecord(
-                id=f"SHARED-{i}",
-                label=f"Shared fact {i}",
-                source_type="observed",
-                confidence=0.95,
-            ))
+            store_a.upsert(
+                ChronoRecord(
+                    id=f"SHARED-{i}",
+                    label=f"Shared fact {i}",
+                    source_type="observed",
+                    confidence=0.95,
+                )
+            )
         assert store_a.chain_valid() is True
 
     # Copy .chronomemory/ to project_b

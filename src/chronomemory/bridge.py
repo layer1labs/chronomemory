@@ -25,7 +25,7 @@ class EsdbRecord:
     """Python mirror of the Rust Record type."""
 
     id: str
-    kind: str = "fact"   # Default matches ChronoRecord and ESDB spec
+    kind: str = "fact"  # Default matches ChronoRecord and ESDB spec
     status: str = "active"
     confidence: float = 0.7
     label: str = ""

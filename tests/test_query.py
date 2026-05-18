@@ -3,6 +3,7 @@ tests/test_query.py
 ====================
 TEST-CM-005: query(rag_filter=True) applies H18 confidence threshold.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -15,24 +16,30 @@ from chronomemory import ChronoRecord, ChronoStore
 @pytest.fixture()
 def populated_store(tmp_path: Path) -> ChronoStore:
     store = ChronoStore(tmp_path).open()
-    store.upsert(ChronoRecord(
-        id="HIGH", kind="fact", confidence=0.9, status="active", label="High conf"
-    ))
-    store.upsert(ChronoRecord(
-        id="THRESHOLD", kind="fact", confidence=0.6, status="active", label="At threshold"
-    ))
-    store.upsert(ChronoRecord(
-        id="LOW", kind="fact", confidence=0.5, status="active", label="Low conf"
-    ))
-    store.upsert(ChronoRecord(
-        id="ZERO", kind="fact", confidence=0.0, status="active", label="Zero conf"
-    ))
-    store.upsert(ChronoRecord(
-        id="TOMBED", kind="fact", confidence=0.9, status="tombstone", label="Tombstoned"
-    ))
-    store.upsert(ChronoRecord(
-        id="REQ", kind="requirement", confidence=0.95, status="active", label="A requirement"
-    ))
+    store.upsert(
+        ChronoRecord(id="HIGH", kind="fact", confidence=0.9, status="active", label="High conf")
+    )
+    store.upsert(
+        ChronoRecord(
+            id="THRESHOLD", kind="fact", confidence=0.6, status="active", label="At threshold"
+        )
+    )
+    store.upsert(
+        ChronoRecord(id="LOW", kind="fact", confidence=0.5, status="active", label="Low conf")
+    )
+    store.upsert(
+        ChronoRecord(id="ZERO", kind="fact", confidence=0.0, status="active", label="Zero conf")
+    )
+    store.upsert(
+        ChronoRecord(
+            id="TOMBED", kind="fact", confidence=0.9, status="tombstone", label="Tombstoned"
+        )
+    )
+    store.upsert(
+        ChronoRecord(
+            id="REQ", kind="requirement", confidence=0.95, status="active", label="A requirement"
+        )
+    )
     return store
 
 
@@ -41,11 +48,11 @@ def test_rag_filter_confidence_threshold(populated_store: ChronoStore) -> None:
     results = populated_store.query(rag_filter=True)
     ids = {r.id for r in results}
 
-    assert "HIGH" in ids,      "HIGH (0.9, active) must be included"
+    assert "HIGH" in ids, "HIGH (0.9, active) must be included"
     assert "THRESHOLD" in ids, "THRESHOLD (0.6, active) must be included"
-    assert "REQ" in ids,       "REQ (0.95, active) must be included"
-    assert "LOW" not in ids,   "LOW (0.5) must be excluded"
-    assert "ZERO" not in ids,  "ZERO (0.0) must be excluded"
+    assert "REQ" in ids, "REQ (0.95, active) must be included"
+    assert "LOW" not in ids, "LOW (0.5) must be excluded"
+    assert "ZERO" not in ids, "ZERO (0.0) must be excluded"
     assert "TOMBED" not in ids, "TOMBED (tombstone) must be excluded even at 0.9"
     populated_store.close()
 
@@ -75,7 +82,7 @@ def test_query_all_active_by_default(populated_store: ChronoStore) -> None:
     results = populated_store.query()
     ids = {r.id for r in results}
     assert "TOMBED" not in ids, "Default query excludes tombstoned records"
-    assert len(results) == 5   # HIGH, THRESHOLD, LOW, ZERO, REQ
+    assert len(results) == 5  # HIGH, THRESHOLD, LOW, ZERO, REQ
     populated_store.close()
 
 
