@@ -35,3 +35,17 @@ This file records significant architectural decisions and governance events.
 - **REQs affected**: REQ-044,REQ-085
 - **Status**: complete
 - **Chain hash**: `fbaf1e6bbc5db943...`
+
+## 2026-05-18T16:08 — specsmith preflight accepted utterance "read-only: gap analysis, spec compliance check, and cross-repo compatibility review" (work_item_id=WI-32472897, confidence_target=0.7).
+- **Author**: specsmith
+- **Type**: preflight
+- **REQs affected**: REQ-085
+- **Status**: complete
+- **Chain hash**: `f5249aaeecca8e70...`
+
+## 2026-05-18T16:08 — work_proposal WI-32472897: read-only: gap analysis, spec compliance check, and cross-repo compatibility review
+- **Author**: specsmith
+- **Type**: work_proposal
+- **REQs affected**: REQ-044,REQ-085
+- **Status**: complete
+- **Chain hash**: `ede9bfae6b17a5e4...`

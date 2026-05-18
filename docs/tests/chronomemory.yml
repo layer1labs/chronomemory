@@ -112,3 +112,51 @@
     Write a WAL in one temp dir using ChronoStore. Copy events.wal to a second
     temp dir. Open a new ChronoStore on the second dir. Assert all records are
     present. Assert chain_valid() == True on the second store.
+
+- id: TEST-CM-011
+  title: WAL with CRLF line endings parses correctly on all platforms
+  requirement_id: REQ-CM-011
+  type: integration
+  file: tests/test_robustness.py
+  function: TestWalCorruption::test_wal_crlf_line_endings
+  description: >
+    Write 3 records. Convert WAL to CRLF line endings. Reopen store.
+    Assert record_count() == 3. This validates cross-platform read compatibility.
+    CI matrix covers ubuntu-latest and windows-latest on Python 3.10–3.13.
+
+- id: TEST-CM-012
+  title: Graceful recovery from WAL and snapshot corruption
+  requirement_id: REQ-CM-012
+  type: unit
+  file: tests/test_robustness.py
+  function: TestWalCorruption
+  description: >
+    12 corruption scenarios tested: partial last line, truncated at boundary,
+    tampered hash, wrong prev_hash, garbage line, binary bytes, missing hash
+    field, wrong seq type, empty WAL, whitespace-only WAL, null bytes in value,
+    CRLF endings. All must not raise exceptions.
+    5 snapshot corruption scenarios: truncated JSON, seq higher than WAL,
+    invalid record inside, empty records array, missing snapshot file.
+
+- id: TEST-CM-013
+  title: Snapshot triggers at seq=50 and tail-replay fills remainder
+  requirement_id: REQ-CM-013
+  type: unit
+  file: tests/test_robustness.py
+  function: TestBoundaryConditions::test_exactly_51_records_snapshot_plus_tail
+  description: >
+    Write 51 records. Assert snapshot.json exists and contains seq==50.
+    Assert record_count() == 51. Assert wal_seq() == 51. Validates that the
+    snapshot+tail architecture works correctly at the snapshot boundary.
+
+- id: TEST-CM-014
+  title: EsdbBridge delegates to ChronoStore WAL; falls back to JSON
+  requirement_id: REQ-CM-014
+  type: unit
+  file: tests/test_bridge.py
+  function: TestEsdbBridgeStatus
+  description: >
+    With WAL: status().backend contains 'ChronoStore'. requirements() and
+    testcases() return records from the WAL. upsert_record() returns True.
+    Without WAL: status().backend contains 'json'. requirements() returns
+    records from .specsmith/requirements.json. upsert_record() returns False.

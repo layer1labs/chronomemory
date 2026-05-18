@@ -138,3 +138,54 @@
   component: "src/chronomemory/store.py"
   test_ids:
     - TEST-CM-010
+
+- id: REQ-CM-011
+  title: Cross-Platform Compatibility
+  description: >
+    ChronoStore must function identically on Windows, Linux, and macOS on Python
+    3.10, 3.11, 3.12, and 3.13. WAL files written on one platform must be
+    readable on any other. CRLF line endings must be handled correctly.
+  source: "ESDB-Specification.md §11"
+  status: Accepted
+  component: "src/chronomemory/store.py"
+  test_ids:
+    - TEST-CM-011
+
+- id: REQ-CM-012
+  title: Graceful Corruption Recovery
+  description: >
+    ChronoStore must recover without raising an exception from: truncated WAL
+    lines, non-JSON garbage lines, missing hash fields, wrong field types,
+    binary bytes at WAL start, CRLF line endings, empty WAL, whitespace-only
+    WAL, and corrupt snapshot JSON. Prior valid records must survive.
+  source: "ESDB-Specification.md §2.4"
+  status: Accepted
+  component: "src/chronomemory/store.py"
+  test_ids:
+    - TEST-CM-012
+
+- id: REQ-CM-013
+  title: Startup Performance — Snapshot + Tail Replay
+  description: >
+    On a store with 10,000+ events and a valid snapshot, open() must complete
+    in under 500 ms on standard developer hardware. The snapshot + tail-replay
+    architecture must ensure startup time is O(tail) not O(total WAL).
+  source: "ESDB-Specification.md §2.4"
+  status: Defined
+  component: "src/chronomemory/store.py"
+  test_ids:
+    - TEST-CM-013
+
+- id: REQ-CM-014
+  title: EsdbBridge Delegation and JSON Fallback
+  description: >
+    EsdbBridge must delegate to ChronoStore when .chronomemory/events.wal exists.
+    When no WAL is present, it must fall back to reading .specsmith/*.json (legacy
+    read-only). Write operations (upsert_record, delete_record) must return False
+    when no WAL is available. This enables transparent upgrade from specsmith JSON
+    to ESDB WAL.
+  source: "ESDB-Specification.md §5.3"
+  status: Accepted
+  component: "src/chronomemory/bridge.py"
+  test_ids:
+    - TEST-CM-014
