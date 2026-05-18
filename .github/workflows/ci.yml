@@ -48,6 +48,26 @@ jobs:
       - name: mypy
         run: mypy src/chronomemory/
 
+  rust-lint:
+    name: Rust lint (clippy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: cargo clippy
+        run: cargo clippy --workspace -- -D warnings
+
+  rust-test:
+    name: Rust tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: cargo test
+        run: cargo test --workspace
+
   zero-deps:
     name: Verify zero runtime dependencies
     runs-on: ubuntu-latest

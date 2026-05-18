@@ -16,3 +16,5 @@ platforms:
   - windows
   - linux
   - macos
+
+aee_phase: release
