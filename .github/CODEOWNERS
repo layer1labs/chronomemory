@@ -1,0 +1,10 @@
+# CODEOWNERS — chronomemory
+# All paths require review from @tbitcs.
+# This integrates with branch protection (require code owner review).
+
+*                           @tbitcs
+src/chronomemory/           @tbitcs
+crates/chronomemory/        @tbitcs
+tests/                      @tbitcs
+docs/                       @tbitcs
+.github/                    @tbitcs

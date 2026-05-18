@@ -49,3 +49,17 @@ This file records significant architectural decisions and governance events.
 - **REQs affected**: REQ-044,REQ-085
 - **Status**: complete
 - **Chain hash**: `ede9bfae6b17a5e4...`
+
+## 2026-05-18T16:34 — specsmith preflight accepted utterance "read-only: check current GitHub state - branch protections, open PRs, issues, security findings" (work_item_id=WI-E0A0B398, confidence_target=0.7).
+- **Author**: specsmith
+- **Type**: preflight
+- **REQs affected**: REQ-085
+- **Status**: complete
+- **Chain hash**: `0a456d25a435bf5c...`
+
+## 2026-05-18T16:34 — work_proposal WI-E0A0B398: read-only: check current GitHub state - branch protections, open PRs, issues, security findings
+- **Author**: specsmith
+- **Type**: work_proposal
+- **REQs affected**: REQ-044,REQ-085
+- **Status**: complete
+- **Chain hash**: `b816949a95970750...`

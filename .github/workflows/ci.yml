@@ -7,10 +7,15 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Default: deny all; each job grants only what it needs.
+permissions: {}
+
 jobs:
   test:
     name: Test (Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -37,6 +42,8 @@ jobs:
   lint:
     name: Lint (ruff + mypy)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v6
@@ -52,6 +59,8 @@ jobs:
   rust-lint:
     name: Rust lint (clippy)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -63,6 +72,8 @@ jobs:
   rust-test:
     name: Rust tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -72,6 +83,8 @@ jobs:
   zero-deps:
     name: Verify zero runtime dependencies
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v6
