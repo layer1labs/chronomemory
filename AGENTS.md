@@ -2,6 +2,27 @@
 
 This project is governed by **specsmith**.
 
+## Session Bootstrap
+
+Run these four steps at the start of **every** session before touching any code:
+
+```bash
+# 1. Update specsmith to latest dev
+pip install --pre --upgrade specsmith
+
+# 2. Migrate project scaffold if behind installed version
+specsmith migrate-project --project-dir .
+
+# 3. Verify governance health
+specsmith audit --project-dir .
+
+# 4. Confirm machine state matches governance YAML
+specsmith sync --project-dir .
+```
+
+Only proceed with the requested task once all four steps complete without errors.
+If `audit` reports failures, surface them to the user before starting work.
+
 ## For AI Agents
 
 All governance rules, session state, requirements, and epistemic constraints
@@ -79,8 +100,14 @@ mypy src/chronomemory/       # type-check
 |---------|--------|
 | `specsmith preflight "<intent>"` | Gate any change; get work item ID |
 | `specsmith phase show` | Current phase + readiness % |
-| `specsmith phase next` | Advance to next AEE phase |
 | `specsmith audit` | Full governance health check |
-| `specsmith import` | Import requirements from ESDB |
-| `specsmith trace seal decision "<msg>"` | Record architectural decision |
 | `specsmith serve` | Start REST API on port 7700 |
+
+---
+
+## Governance commands
+
+```
+/specsmith save    /specsmith load    /specsmith audit --strict
+/specsmith sync    /specsmith push    /specsmith pull
+```
