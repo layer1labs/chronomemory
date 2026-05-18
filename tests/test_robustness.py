@@ -10,15 +10,11 @@ No external dependencies; pure stdlib + chronomemory.
 """
 from __future__ import annotations
 
-import io
 import json
 import os
-import shutil
-import threading
-import time
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -43,7 +39,8 @@ def _snap_path(root: Path) -> Path:
 
 
 def _read_wal_lines(root: Path) -> list[str]:
-    return [l for l in _wal_path(root).read_text(encoding="utf-8").splitlines() if l.strip()]
+    text = _wal_path(root).read_text(encoding="utf-8")
+    return [line for line in text.splitlines() if line.strip()]
 
 
 def _write_store(root: Path, n: int) -> None:
@@ -259,7 +256,7 @@ class TestSnapshotCorruption:
         _write_store(tmp_path, 3)
         snap = _snap_path(tmp_path)
         if not snap.exists():
-            db_dir = tmp_path / ".chronomemory"
+            tmp_path / ".chronomemory"
             snap_data = {"seq": 999, "last_hash": "", "ts": "now", "records": []}
             snap.write_text(json.dumps(snap_data), encoding="utf-8")
         else:
@@ -319,7 +316,9 @@ class TestSnapshotCorruption:
 
 class TestWriteFailureSimulation:
 
-    def test_crash_after_tmp_write_before_rename(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_crash_after_tmp_write_before_rename(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """
         Simulate: process crashes after writing .wal.tmp but before os.replace.
         Recovery: next upsert finds stale .wal.tmp, cleans up, writes fresh.
@@ -369,7 +368,9 @@ class TestWriteFailureSimulation:
             assert s2.chain_valid() is True
             assert s2.record_count() == 3
 
-    def test_fsync_failure_does_not_crash_store(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_fsync_failure_does_not_crash_store(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """OSError from os.fsync is silently swallowed; write succeeds via fallback."""
         monkeypatch.setattr("os.fsync", MagicMock(side_effect=OSError("fsync failed")))
 
@@ -380,7 +381,9 @@ class TestWriteFailureSimulation:
         with ChronoStore(tmp_path) as s2:
             assert s2.record_count() == 5
 
-    def test_multiple_consecutive_os_replace_failures(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_multiple_consecutive_os_replace_failures(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Every os.replace call fails: fallback direct-append path must maintain consistency."""
         monkeypatch.setattr("os.replace", MagicMock(side_effect=OSError("always fails")))
 
@@ -890,7 +893,9 @@ class TestMigrationEdgeCases:
         """All non-deprecated governance statuses map to ESDB 'active'."""
         sm = tmp_path / ".specsmith"
         sm.mkdir()
-        statuses = ["defined", "implemented", "planned", "partial", "accepted", "verified", "unknown"]
+        statuses = [
+            "defined", "implemented", "planned", "partial", "accepted", "verified", "unknown",
+        ]
         reqs = [{"id": f"REQ-{i}", "title": f"Req {i}", "status": s}
                 for i, s in enumerate(statuses)]
         (sm / "requirements.json").write_text(json.dumps(reqs))

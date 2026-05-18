@@ -106,7 +106,9 @@ def test_wal_is_ndjson(tmp_root: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_atomic_wal_write_fallback_on_replace_failure(tmp_root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_atomic_wal_write_fallback_on_replace_failure(
+    tmp_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """TEST-CM-007: If os.replace fails, the fallback path must not corrupt the WAL."""
     import os
 

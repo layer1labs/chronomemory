@@ -20,16 +20,16 @@ Quick start::
 
 Spec: ESDB-Specification.md v1.0 (Layer1Labs / BitConcepts)
 """
+from chronomemory.bridge import (
+    EsdbBridge,
+    EsdbRecord,
+    EsdbStatus,
+)
 from chronomemory.store import (
     ChronoRecord,
     ChronoStore,
     WalEvent,
     open_store,
-)
-from chronomemory.bridge import (
-    EsdbBridge,
-    EsdbRecord,
-    EsdbStatus,
 )
 
 __version__ = "0.1.0"

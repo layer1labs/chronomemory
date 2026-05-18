@@ -15,12 +15,24 @@ from chronomemory import ChronoRecord, ChronoStore
 @pytest.fixture()
 def populated_store(tmp_path: Path) -> ChronoStore:
     store = ChronoStore(tmp_path).open()
-    store.upsert(ChronoRecord(id="HIGH",      kind="fact",       confidence=0.9,  status="active",    label="High conf"))
-    store.upsert(ChronoRecord(id="THRESHOLD", kind="fact",       confidence=0.6,  status="active",    label="At threshold"))
-    store.upsert(ChronoRecord(id="LOW",       kind="fact",       confidence=0.5,  status="active",    label="Low conf"))
-    store.upsert(ChronoRecord(id="ZERO",      kind="fact",       confidence=0.0,  status="active",    label="Zero conf"))
-    store.upsert(ChronoRecord(id="TOMBED",    kind="fact",       confidence=0.9,  status="tombstone", label="Tombstoned"))
-    store.upsert(ChronoRecord(id="REQ",       kind="requirement",confidence=0.95, status="active",    label="A requirement"))
+    store.upsert(ChronoRecord(
+        id="HIGH", kind="fact", confidence=0.9, status="active", label="High conf"
+    ))
+    store.upsert(ChronoRecord(
+        id="THRESHOLD", kind="fact", confidence=0.6, status="active", label="At threshold"
+    ))
+    store.upsert(ChronoRecord(
+        id="LOW", kind="fact", confidence=0.5, status="active", label="Low conf"
+    ))
+    store.upsert(ChronoRecord(
+        id="ZERO", kind="fact", confidence=0.0, status="active", label="Zero conf"
+    ))
+    store.upsert(ChronoRecord(
+        id="TOMBED", kind="fact", confidence=0.9, status="tombstone", label="Tombstoned"
+    ))
+    store.upsert(ChronoRecord(
+        id="REQ", kind="requirement", confidence=0.95, status="active", label="A requirement"
+    ))
     return store
 
 

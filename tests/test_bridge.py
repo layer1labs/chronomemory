@@ -9,18 +9,17 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
 from chronomemory import ChronoRecord, ChronoStore, EsdbBridge
 from chronomemory.bridge import EsdbRecord, EsdbStatus
-
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 
-def _make_specsmith_dir(root: Path, requirements: list[dict], testcases: list[dict] | None = None) -> Path:
+def _make_specsmith_dir(
+    root: Path, requirements: list[dict], testcases: list[dict] | None = None
+) -> Path:
     sm = root / ".specsmith"
     sm.mkdir(exist_ok=True)
     (sm / "requirements.json").write_text(json.dumps(requirements), encoding="utf-8")
@@ -105,8 +104,12 @@ class TestEsdbBridgeQuery:
     def test_requirements_from_wal(self, tmp_path: Path) -> None:
         """requirements() returns requirement records from ChronoStore WAL."""
         with ChronoStore(tmp_path) as s:
-            s.upsert(ChronoRecord(id="REQ-001", kind="requirement", label="First req", confidence=0.9))
-            s.upsert(ChronoRecord(id="REQ-002", kind="requirement", label="Second req", confidence=0.8))
+            s.upsert(ChronoRecord(
+                id="REQ-001", kind="requirement", label="First req", confidence=0.9
+            ))
+            s.upsert(ChronoRecord(
+                id="REQ-002", kind="requirement", label="Second req", confidence=0.8
+            ))
             s.upsert(ChronoRecord(id="FACT-001", kind="fact", label="Not a req", confidence=0.9))
 
         bridge = EsdbBridge(project_dir=str(tmp_path))
@@ -121,8 +124,12 @@ class TestEsdbBridgeQuery:
     def test_testcases_from_wal(self, tmp_path: Path) -> None:
         """testcases() returns testcase records from ChronoStore WAL."""
         with ChronoStore(tmp_path) as s:
-            s.upsert(ChronoRecord(id="TEST-001", kind="testcase", label="First test", confidence=1.0))
-            s.upsert(ChronoRecord(id="REQ-001", kind="requirement", label="Not a test", confidence=0.9))
+            s.upsert(ChronoRecord(
+                id="TEST-001", kind="testcase", label="First test", confidence=1.0
+            ))
+            s.upsert(ChronoRecord(
+                id="REQ-001", kind="requirement", label="Not a test", confidence=0.9
+            ))
 
         bridge = EsdbBridge(project_dir=str(tmp_path))
         tests = bridge.testcases()

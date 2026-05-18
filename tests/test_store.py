@@ -11,13 +11,11 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 import pytest
 
-from chronomemory import ChronoRecord, ChronoStore, EsdbBridge
-
+from chronomemory import ChronoRecord, ChronoStore
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -101,7 +99,7 @@ def test_tombstone_no_physical_removal(tmp_root: Path) -> None:
 
     # Verify WAL has both events (upsert + delete)
     wal = (tmp_root / ".chronomemory" / "events.wal").read_text(encoding="utf-8")
-    lines = [l for l in wal.splitlines() if l.strip()]
+    lines = [line for line in wal.splitlines() if line.strip()]
     assert len(lines) >= 2, "WAL must retain both upsert and delete events"
 
 

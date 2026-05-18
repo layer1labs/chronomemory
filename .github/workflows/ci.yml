@@ -63,7 +63,8 @@ jobs:
           python -c "
           import importlib.metadata
           dist = importlib.metadata.distribution('chronomemory')
-          requires = dist.metadata.get_all('Requires-Dist') or []
+          all_reqs = dist.metadata.get_all('Requires-Dist') or []
+          requires = [r for r in all_reqs if '; extra ==' not in r]
           assert len(requires) == 0, f'Unexpected runtime deps: {requires}'
           print('Zero runtime dependencies confirmed.')
           "
