@@ -18,7 +18,10 @@ pub struct ContextPackRequest {
 
 /// Estimate tokens for a record (rough: ~4 chars per token).
 fn estimate_tokens(record: &Record) -> u64 {
-    let text_len = record.label.len() + serde_json::to_string(&record.data).unwrap_or_default().len();
+    let text_len = record.label.len()
+        + serde_json::to_string(&record.data)
+            .unwrap_or_default()
+            .len();
     (text_len as u64) / 4 + 1
 }
 

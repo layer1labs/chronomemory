@@ -1,0 +1,34 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.9
+    hooks:
+      - id: ruff-format
+        name: ruff format (Python)
+      - id: ruff
+        name: ruff check (Python)
+        args: [--fix]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.16.0
+    hooks:
+      - id: mypy
+        name: mypy (type-check)
+        args: [--strict]
+        additional_dependencies: []
+        files: ^src/chronomemory/
+
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt (Rust)
+        language: system
+        entry: cargo fmt --check --all
+        pass_filenames: false
+        types: [rust]
+
+      - id: cargo-clippy
+        name: cargo clippy (Rust)
+        language: system
+        entry: cargo clippy --workspace -- -D warnings
+        pass_filenames: false
+        types: [rust]

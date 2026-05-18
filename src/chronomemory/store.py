@@ -349,7 +349,7 @@ class ChronoStore:
             "compact",
             ChronoRecord(id="__compact__", label=f"Compacted at seq={self._seq}"),
         )
-        with open(self._wal_path, "w", encoding="utf-8") as f:
+        with self._wal_path.open("w", encoding="utf-8") as f:
             f.write(sentinel.to_json_line() + "\n")
         self._last_hash = sentinel.hash
         self._seq = sentinel.seq
@@ -578,7 +578,7 @@ class ChronoStore:
         try:
             # Append mode if WAL exists, create otherwise
             mode = "a" if self._wal_path.exists() else "w"
-            with open(tmp_path, mode, encoding="utf-8") as f:
+            with tmp_path.open(mode, encoding="utf-8") as f:
                 if mode == "a":
                     # Write temp file as full WAL + new line
                     existing = (
@@ -594,10 +594,10 @@ class ChronoStore:
                     os.fsync(f.fileno())
                 except (AttributeError, OSError):
                     pass
-            os.replace(str(tmp_path), str(self._wal_path))
+            tmp_path.replace(self._wal_path)
         except Exception:  # noqa: BLE001
             # Direct append fallback (less safe but non-blocking)
-            with open(self._wal_path, "a", encoding="utf-8") as f:
+            with self._wal_path.open("a", encoding="utf-8") as f:
                 f.write(line)
         finally:
             if tmp_path.exists():
@@ -614,7 +614,7 @@ class ChronoStore:
         content = json.dumps(data, indent=2, ensure_ascii=False)
         tmp = self._snapshot_path.with_suffix(".json.tmp")
         tmp.write_text(content, encoding="utf-8")
-        os.replace(str(tmp), str(self._snapshot_path))
+        tmp.replace(self._snapshot_path)
 
 
 # ---------------------------------------------------------------------------
@@ -631,4 +631,3 @@ def open_store(project_root: str | Path, *, recursion_depth: int = 0) -> ChronoS
     store = ChronoStore(project_root, recursion_depth=recursion_depth)
     store.open()
     return store
-

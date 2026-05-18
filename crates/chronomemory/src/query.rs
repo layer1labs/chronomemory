@@ -29,7 +29,11 @@ pub fn what_is_known<'a>(store: &'a Store, entity: &str) -> Vec<&'a Record> {
 }
 
 /// Query: what conflicts with a record?
-pub fn what_conflicts_with<'a>(id: &EsdbId, store: &'a Store, dep_graph: &DepGraph) -> Vec<&'a Record> {
+pub fn what_conflicts_with<'a>(
+    id: &EsdbId,
+    store: &'a Store,
+    dep_graph: &DepGraph,
+) -> Vec<&'a Record> {
     dep_graph
         .what_contradicts(id)
         .iter()
@@ -50,7 +54,11 @@ pub fn what_depends_on<'a>(id: &EsdbId, store: &'a Store, dep_graph: &DepGraph) 
 
 /// Query: has this work been done? (duplicate check by label)
 pub fn has_this_work_been_done(store: &Store, label: &str) -> bool {
-    let work_kinds = [RecordKind::Action, RecordKind::WorkItem, RecordKind::SkillRun];
+    let work_kinds = [
+        RecordKind::Action,
+        RecordKind::WorkItem,
+        RecordKind::SkillRun,
+    ];
     for kind in &work_kinds {
         for record in store.query_active(*kind) {
             if record.label == label {

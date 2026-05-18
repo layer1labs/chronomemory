@@ -3,6 +3,7 @@ tests/test_oea.py
 =================
 TEST-CM-003: ChronoRecord carries all 7 OEA anti-hallucination fields.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

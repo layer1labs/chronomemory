@@ -21,14 +21,8 @@ impl DepGraph {
 
     /// Add a dependency edge.
     pub fn add_edge(&mut self, from: EsdbId, to: EsdbId, edge_type: EdgeType) {
-        self.forward
-            .entry(from)
-            .or_default()
-            .push((to, edge_type));
-        self.reverse
-            .entry(to)
-            .or_default()
-            .push((from, edge_type));
+        self.forward.entry(from).or_default().push((to, edge_type));
+        self.reverse.entry(to).or_default().push((from, edge_type));
     }
 
     /// What does `id` depend on? (upstream dependencies)
@@ -38,7 +32,12 @@ impl DepGraph {
             .map(|edges| {
                 edges
                     .iter()
-                    .filter(|(_, et)| matches!(et, EdgeType::DependsOn | EdgeType::Assumes | EdgeType::DerivedFrom))
+                    .filter(|(_, et)| {
+                        matches!(
+                            et,
+                            EdgeType::DependsOn | EdgeType::Assumes | EdgeType::DerivedFrom
+                        )
+                    })
                     .map(|(to, _)| *to)
                     .collect()
             })
@@ -52,7 +51,12 @@ impl DepGraph {
             .map(|edges| {
                 edges
                     .iter()
-                    .filter(|(_, et)| matches!(et, EdgeType::DependsOn | EdgeType::Assumes | EdgeType::DerivedFrom))
+                    .filter(|(_, et)| {
+                        matches!(
+                            et,
+                            EdgeType::DependsOn | EdgeType::Assumes | EdgeType::DerivedFrom
+                        )
+                    })
                     .map(|(from, _)| *from)
                     .collect()
             })

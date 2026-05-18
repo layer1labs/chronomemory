@@ -20,6 +20,7 @@ Quick start::
 
 Spec: ESDB-Specification.md v1.0 (Layer1Labs / BitConcepts)
 """
+
 from chronomemory.bridge import (
     EsdbBridge,
     EsdbRecord,

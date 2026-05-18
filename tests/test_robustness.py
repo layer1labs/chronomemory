@@ -8,6 +8,7 @@ the store always recovers to a consistent state without data corruption.
 
 No external dependencies; pure stdlib + chronomemory.
 """
+
 from __future__ import annotations
 
 import json
@@ -55,7 +56,6 @@ def _write_store(root: Path, n: int) -> None:
 
 
 class TestWalCorruption:
-
     def test_truncated_wal_last_line_partial(self, tmp_path: Path) -> None:
         """WAL truncated mid-final-line: prior records survive, chain_valid=False."""
         _write_store(tmp_path, 3)
@@ -183,12 +183,15 @@ class TestWalCorruption:
         """WAL line with null bytes in a JSON string value: skipped or handled."""
         _write_store(tmp_path, 1)
         # Append a line with null byte in label
-        bad_event = WalEvent(seq=999, ts="2026-01-01T00:00:00Z", op="upsert",
-                             record_id="X", record={"id": "X", "label": "null\x00byte"})
-        bad_event.compute_hash()
-        _wal_path(tmp_path).open("a", encoding="utf-8").write(
-            bad_event.to_json_line() + "\n"
+        bad_event = WalEvent(
+            seq=999,
+            ts="2026-01-01T00:00:00Z",
+            op="upsert",
+            record_id="X",
+            record={"id": "X", "label": "null\x00byte"},
         )
+        bad_event.compute_hash()
+        _wal_path(tmp_path).open("a", encoding="utf-8").write(bad_event.to_json_line() + "\n")
 
         with ChronoStore(tmp_path) as s:
             _ = s.record_count()  # Must not raise
@@ -240,13 +243,12 @@ class TestWalCorruption:
 
 
 class TestSnapshotCorruption:
-
     def test_snapshot_truncated_mid_json(self, tmp_path: Path) -> None:
         """Snapshot truncated: silently discarded, state rebuilt from WAL."""
         _write_store(tmp_path, 55)  # Triggers snapshot at seq=50
         snap = _snap_path(tmp_path)
         content = snap.read_text(encoding="utf-8")
-        snap.write_text(content[:len(content)//2], encoding="utf-8")  # Cut in half
+        snap.write_text(content[: len(content) // 2], encoding="utf-8")  # Cut in half
 
         with ChronoStore(tmp_path) as s:
             assert s.record_count() == 55  # All from full WAL replay
@@ -315,7 +317,6 @@ class TestSnapshotCorruption:
 
 
 class TestWriteFailureSimulation:
-
     def test_crash_after_tmp_write_before_rename(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -447,7 +448,6 @@ class TestWriteFailureSimulation:
 
 
 class TestBoundaryConditions:
-
     def test_zero_records(self, tmp_path: Path) -> None:
         """Empty store: all queries return [] or None."""
         with ChronoStore(tmp_path) as s:
@@ -508,7 +508,7 @@ class TestBoundaryConditions:
         with ChronoStore(tmp_path) as s2:
             rag = {r.id for r in s2.query(rag_filter=True)}
             assert "ZERO" not in rag
-            assert "BOUNDARY" in rag    # Exactly at threshold → included
+            assert "BOUNDARY" in rag  # Exactly at threshold → included
             assert "FULL" in rag
 
     def test_single_char_id(self, tmp_path: Path) -> None:
@@ -533,7 +533,6 @@ class TestBoundaryConditions:
 
 
 class TestSpecialContent:
-
     def test_unicode_label_cjk(self, tmp_path: Path) -> None:
         """CJK characters in label survive WAL round-trip."""
         with ChronoStore(tmp_path) as s:
@@ -637,9 +636,7 @@ class TestSpecialContent:
             "max_tokens": 4096,
         }
         with ChronoStore(tmp_path) as s:
-            s.upsert(ChronoRecord(
-                id="MODEL", model_assumptions=assumptions, recursion_depth=2
-            ))
+            s.upsert(ChronoRecord(id="MODEL", model_assumptions=assumptions, recursion_depth=2))
         with ChronoStore(tmp_path) as s2:
             rec = s2.get("MODEL")
             assert rec is not None
@@ -653,7 +650,6 @@ class TestSpecialContent:
 
 
 class TestLifecycle:
-
     def test_open_close_open_cycle(self, tmp_path: Path) -> None:
         """Multiple open/close cycles maintain consistent state."""
         with ChronoStore(tmp_path) as s:
@@ -800,7 +796,6 @@ class TestLifecycle:
 
 
 class TestConcurrentAccess:
-
     def test_two_readers_on_same_wal(self, tmp_path: Path) -> None:
         """Two independent ChronoStore instances reading the same WAL see same state."""
         _write_store(tmp_path, 10)
@@ -844,7 +839,6 @@ class TestConcurrentAccess:
 
 
 class TestMigrationEdgeCases:
-
     def test_migrate_no_specsmith_dir(self, tmp_path: Path) -> None:
         """migrate_from_json() with non-existent dir: returns zeros gracefully."""
         with ChronoStore(tmp_path) as s:
@@ -894,10 +888,17 @@ class TestMigrationEdgeCases:
         sm = tmp_path / ".specsmith"
         sm.mkdir()
         statuses = [
-            "defined", "implemented", "planned", "partial", "accepted", "verified", "unknown",
+            "defined",
+            "implemented",
+            "planned",
+            "partial",
+            "accepted",
+            "verified",
+            "unknown",
         ]
-        reqs = [{"id": f"REQ-{i}", "title": f"Req {i}", "status": s}
-                for i, s in enumerate(statuses)]
+        reqs = [
+            {"id": f"REQ-{i}", "title": f"Req {i}", "status": s} for i, s in enumerate(statuses)
+        ]
         (sm / "requirements.json").write_text(json.dumps(reqs))
 
         with ChronoStore(tmp_path) as s:
@@ -946,7 +947,6 @@ class TestMigrationEdgeCases:
 
 
 class TestChainInvariants:
-
     def test_chain_valid_on_single_record(self, tmp_path: Path) -> None:
         """chain_valid() must be True after exactly one upsert."""
         with ChronoStore(tmp_path) as s:
