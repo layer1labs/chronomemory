@@ -21,6 +21,11 @@ updates:
       - "dependencies"
       - "rust"
     open-pull-requests-limit: 5
+    ignore:
+      # bincode v1 -> v3 is a breaking API change; stay on 1.x until
+      # Phase 2 NDJSON WAL migration is complete (see GitHub issue #1)
+      - dependency-name: "bincode"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
