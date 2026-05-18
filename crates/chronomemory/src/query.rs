@@ -62,7 +62,7 @@ pub fn has_this_work_been_done(store: &Store, label: &str) -> bool {
 }
 
 /// Query: what changed since a given epoch?
-pub fn what_changed_since<'a>(store: &'a Store, _epoch: u64) -> Vec<&'a Record> {
+pub fn what_changed_since(store: &Store, _epoch: u64) -> Vec<&Record> {
     // Since we don't store epoch per record, approximate by checking
     // all records with modified_at after a threshold. For now return
     // all active records (the real implementation would track per-record epoch).
@@ -81,7 +81,7 @@ pub fn what_changed_since<'a>(store: &'a Store, _epoch: u64) -> Vec<&'a Record> 
 }
 
 /// Query: what requires re-verification?
-pub fn what_requires_reverification<'a>(store: &'a Store) -> Vec<&'a Record> {
+pub fn what_requires_reverification(store: &Store) -> Vec<&Record> {
     store
         .query_all(RecordKind::WorkItem)
         .into_iter()

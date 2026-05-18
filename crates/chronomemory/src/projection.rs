@@ -49,12 +49,10 @@ pub fn project(
     config: &ProjectionConfig,
 ) -> ProjectionDecision {
     // 1. Source support (Invariant 1: unsupported claims may never become fact)
-    if config.require_source && proposal.sources.is_empty() {
-        if proposal.record.kind == RecordKind::Fact {
-            return ProjectionDecision::DowngradeToHypothesis {
-                reason: "No source provided — facts require at least one source".into(),
-            };
-        }
+    if config.require_source && proposal.sources.is_empty() && proposal.record.kind == RecordKind::Fact {
+        return ProjectionDecision::DowngradeToHypothesis {
+            reason: "No source provided — facts require at least one source".into(),
+        };
     }
 
     // 2. Confidence threshold
@@ -73,7 +71,7 @@ pub fn project(
         let contradictions = dep_graph.what_contradicts(&proposal.record.id);
         let active_contradictions: Vec<_> = contradictions
             .iter()
-            .filter(|id| store.get(id).map_or(false, |r| r.is_active()))
+            .filter(|id| store.get(id).is_some_and(|r| r.is_active()))
             .collect();
         if !active_contradictions.is_empty() {
             return ProjectionDecision::Reject {

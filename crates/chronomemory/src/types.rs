@@ -48,19 +48,14 @@ impl std::fmt::Display for EsdbId {
 // Record status (Invariant 2: no silent disappearance)
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub enum RecordStatus {
+    #[default]
     Active,
     Superseded,
     Archived,
     Invalidated,
     Tombstoned,
-}
-
-impl Default for RecordStatus {
-    fn default() -> Self {
-        Self::Active
-    }
 }
 
 // ---------------------------------------------------------------------------

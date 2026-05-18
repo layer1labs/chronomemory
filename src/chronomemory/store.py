@@ -85,7 +85,7 @@ class ChronoRecord:
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> ChronoRecord:
-        known = {f.name for f in cls.__dataclass_fields__.values()}  # type: ignore[attr-defined]
+        known = {f.name for f in cls.__dataclass_fields__.values()}
         filtered = {k: v for k, v in d.items() if k in known}
         return cls(**filtered)
 
@@ -136,7 +136,7 @@ class WalEvent:
     @classmethod
     def from_json_line(cls, line: str) -> WalEvent:
         d = json.loads(line)
-        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})  # type: ignore[attr-defined]
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
 
 # ---------------------------------------------------------------------------
