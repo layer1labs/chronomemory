@@ -1,0 +1,18 @@
+project: chronomemory
+type: python-library
+version: 0.1.0
+phase: inception
+owner: Layer1Labs Silicon, Inc. / BitConcepts, LLC.
+vcs_platform: github
+repo: https://github.com/layer1labs/chronomemory
+description: >
+  Epistemic State Database — tamper-evident, WAL-based persistence for
+  agentic AI workflows. OEA anti-hallucination fields, confidence-filtered
+  RAG retrieval, SHA-256 hash chain, CPSC projection engine.
+spec_ref: docs/ip/specs/ESDB-Specification.md (Layer1Labs / BitConcepts)
+requirements_namespace: REQ-CM
+testcases_namespace: TEST-CM
+platforms:
+  - windows
+  - linux
+  - macos

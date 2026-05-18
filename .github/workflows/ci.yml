@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package (no extras — verify zero-dep install)
+        run: pip install -e .
+
+      - name: Install dev dependencies
+        run: pip install pytest pytest-cov
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+
+  lint:
+    name: Lint (ruff + mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dev deps
+        run: pip install -e ".[dev]"
+      - name: ruff check
+        run: ruff check src/ tests/
+      - name: mypy
+        run: mypy src/chronomemory/
+
+  zero-deps:
+    name: Verify zero runtime dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install only the package (no extras)
+        run: pip install --no-deps -e .
+      - name: Check pip show lists no runtime deps
+        run: |
+          python -c "
+          import importlib.metadata
+          dist = importlib.metadata.distribution('chronomemory')
+          requires = dist.metadata.get_all('Requires-Dist') or []
+          assert len(requires) == 0, f'Unexpected runtime deps: {requires}'
+          print('Zero runtime dependencies confirmed.')
+          "
+      - name: Import smoke test
+        run: python -c "from chronomemory import ChronoStore, ChronoRecord, EsdbBridge; print('OK')"

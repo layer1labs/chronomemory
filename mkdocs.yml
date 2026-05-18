@@ -1,0 +1,83 @@
+site_name: chronomemory
+site_description: >
+  Epistemic State Database (ESDB) — tamper-evident WAL-based persistence
+  for agentic AI workflows. OEA anti-hallucination fields, confidence-filtered
+  RAG retrieval, SHA-256 hash chain, CPSC projection engine.
+site_url: https://chronomemory.readthedocs.io
+repo_url: https://github.com/layer1labs/chronomemory
+repo_name: layer1labs/chronomemory
+edit_uri: edit/main/docs/site/
+
+docs_dir: docs/site
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - content.code.annotate
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Quick start: quickstart.md
+  - Concepts:
+      - OEA anti-hallucination fields: concepts/oea.md
+      - WAL and hash chain: concepts/wal.md
+  - API reference:
+      - ChronoStore: api/store.md
+      - ChronoRecord: api/record.md
+      - EsdbBridge: api/bridge.md
+  - Integration:
+      - chronoagent: integration/chronoagent.md
+      - ctt-neural: integration/ctt-neural.md
+      - specsmith: integration/specsmith.md
+  - Migration guide: migration.md
+  - Rust core (Phase 2): rust-core.md
+  - Changelog: changelog.md
+
+markdown_extensions:
+  - tables
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - pymdownx.snippets
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/layer1labs/chronomemory
+
+copyright: "© 2026 Layer1Labs Silicon, Inc. / BitConcepts, LLC."

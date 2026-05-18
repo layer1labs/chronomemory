@@ -1,0 +1,140 @@
+# specsmith requirements — chronomemory
+# CANONICAL SOURCE: edit this file, not docs/REQUIREMENTS.md
+# Namespace: REQ-CM-NNN
+# Spec ref: ESDB-Specification.md v1.0
+
+- id: REQ-CM-001
+  title: Append-Only WAL with SHA-256 Hash Chain
+  description: >
+    The WAL (events.wal) must be append-only. Every event carries the SHA-256
+    hash of the previous event's canonical JSON payload, forming a tamper-evident
+    chain. chain_valid() must return True iff every link in the chain is unbroken.
+    Any truncation, reordering, or modification of a committed event must cause
+    chain_valid() to return False.
+  source: "ESDB-Specification.md §2.4"
+  status: Accepted
+  component: "src/chronomemory/store.py"
+  test_ids:
+    - TEST-CM-001
+
+- id: REQ-CM-002
+  title: NDJSON Wire Format
+  description: >
+    The WAL must use NDJSON (Newline-Delimited JSON) as the canonical wire format.
+    Each line in events.wal is a complete, independently parseable JSON object.
+    This is the canonical format per ESDB-Specification.md §2.4. Binary formats
+    (e.g. bincode) are an optional Phase 2 optimisation and must not be the
+    default format.
+  source: "ESDB-Specification.md §2.4"
+  status: Accepted
+  component: "src/chronomemory/store.py"
+  test_ids:
+    - TEST-CM-002
+
+- id: REQ-CM-003
+  title: OEA Anti-Hallucination Fields on Every Record
+  description: >
+    Every ChronoRecord must carry all seven OEA fields: source_type (H19),
+    confidence (H17), evidence (H20), epistemic_boundary (H15), is_hypothesis
+    (H20), model_assumptions (H21), recursion_depth (H16). Records migrated from
+    legacy JSON without OEA fields must receive safe defaults. No write path may
+    strip or omit OEA fields.
+  source: "ESDB-Specification.md §3"
+  status: Accepted
+  component: "src/chronomemory/store.py"
+  test_ids:
+    - TEST-CM-003
+
+- id: REQ-CM-004
+  title: Snapshot and WAL Tail Replay on Open
+  description: >
+    ChronoStore writes a snapshot.json every 50 appended events. On open(), the
+    store loads the snapshot and replays only WAL events with seq > snapshot.seq.
+    Snapshot + tail replay must produce the same in-memory state as a full WAL
+    replay from genesis. A corrupt snapshot must be silently discarded; state
+    is recovered from full WAL replay.
+  source: "ESDB-Specification.md §2.4"
+  status: Accepted
+  component: "src/chronomemory/store.py"
+  test_ids:
+    - TEST-CM-004
+
+- id: REQ-CM-005
+  title: Confidence-Filtered RAG Query (H18)
+  description: >
+    query(rag_filter=True) must return only records with confidence >= 0.6 and
+    status == "active". This implements OEA rule H18. The threshold 0.6 is the
+    default; callers may override with min_confidence. Records below the threshold
+    must not appear in RAG context injection.
+  source: "ESDB-Specification.md §3, §6"
+  status: Accepted
+  component: "src/chronomemory/store.py"
+  test_ids:
+    - TEST-CM-005
+
+- id: REQ-CM-006
+  title: Tombstone Semantics — No Physical Deletion
+  description: >
+    delete(record_id) must mark the record status as "tombstone" via a WAL event
+    and update in-memory state. It must NOT physically remove the record from the
+    WAL or snapshot. Tombstoned records are excluded from query() by default but
+    remain present in the WAL for audit purposes.
+  source: "ESDB-Specification.md §2.3"
+  status: Accepted
+  component: "src/chronomemory/store.py"
+  test_ids:
+    - TEST-CM-006
+
+- id: REQ-CM-007
+  title: Atomic WAL Writes (write-temp + fsync + rename)
+  description: >
+    upsert() and delete() must write WAL events atomically: write to a .wal.tmp
+    file, fsync, then os.replace() to the final path. A crash mid-write must
+    leave the WAL intact. Partial writes must not corrupt the chain.
+  source: "ESDB-Specification.md §2.4"
+  status: Accepted
+  component: "src/chronomemory/store.py"
+  test_ids:
+    - TEST-CM-007
+
+- id: REQ-CM-008
+  title: Migration from Legacy .specsmith/ JSON
+  description: >
+    migrate_from_json(specsmith_dir) must import requirements.json and
+    testcases.json from a .specsmith/ directory into the WAL with
+    source_type="observed". The operation must be idempotent: re-running on the
+    same input must skip records whose id + label + status match existing records.
+    Governance status (defined/implemented/…) must be mapped to ESDB status
+    (active/deprecated) — they are different concepts and must not be conflated.
+  source: "ESDB-Specification.md §5.3"
+  status: Accepted
+  component: "src/chronomemory/store.py"
+  test_ids:
+    - TEST-CM-008
+
+- id: REQ-CM-009
+  title: Zero Runtime Dependencies
+  description: >
+    The chronomemory Python package must have zero external runtime dependencies.
+    All functionality must use Python stdlib only (hashlib, json, os, shutil,
+    pathlib, dataclasses, typing). No third-party package may appear in
+    pyproject.toml [project.dependencies].
+  source: "ESDB-Specification.md §11"
+  status: Accepted
+  component: "pyproject.toml"
+  test_ids:
+    - TEST-CM-009
+
+- id: REQ-CM-010
+  title: Cross-Repo WAL Compatibility
+  description: >
+    All projects that import chronomemory must produce WAL files that are
+    mutually readable by any other project using the same chronomemory version.
+    The NDJSON format and SHA-256 hash algorithm must not vary between consumers.
+    WAL files written by specsmith, chronoagent, or ctt-neural must all pass
+    chain_valid() when opened by any of the three.
+  source: "ESDB-Specification.md §2.4, §9"
+  status: Accepted
+  component: "src/chronomemory/store.py"
+  test_ids:
+    - TEST-CM-010

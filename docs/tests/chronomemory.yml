@@ -1,0 +1,114 @@
+# specsmith test cases — chronomemory
+# CANONICAL SOURCE: edit this file, not docs/TESTS.md
+# Namespace: TEST-CM-NNN
+
+- id: TEST-CM-001
+  title: WAL SHA-256 chain is valid after N appends
+  requirement_id: REQ-CM-001
+  type: unit
+  file: tests/test_wal_chain.py
+  function: test_wal_hash_chain_integrity
+  description: >
+    Append 10 records to a fresh store. Assert chain_valid() == True.
+    Directly mutate one record's payload in-memory. Assert chain_valid() == False.
+    Reopen store from disk (chain on disk is intact). Assert chain_valid() == True.
+
+- id: TEST-CM-002
+  title: WAL file is valid NDJSON
+  requirement_id: REQ-CM-002
+  type: unit
+  file: tests/test_wal_chain.py
+  function: test_wal_is_ndjson
+  description: >
+    After upsert(), read events.wal. Assert every non-empty line parses as
+    json.loads() without error. Assert no binary magic bytes at file start.
+
+- id: TEST-CM-003
+  title: ChronoRecord carries all 7 OEA fields
+  requirement_id: REQ-CM-003
+  type: unit
+  file: tests/test_oea.py
+  function: test_all_oea_fields_present
+  description: >
+    Create a ChronoRecord with only id and label. Assert to_dict() contains
+    all 7 OEA fields: source_type, confidence, evidence, epistemic_boundary,
+    is_hypothesis, model_assumptions, recursion_depth. Assert all fields survive
+    upsert() + round-trip via WAL replay.
+
+- id: TEST-CM-004
+  title: Snapshot + WAL tail replay produces correct state
+  requirement_id: REQ-CM-004
+  type: unit
+  file: tests/test_store.py
+  function: test_snapshot_replay_consistency
+  description: >
+    Write 55 records (triggers snapshot at 50). Close store. Reopen. Assert all
+    55 records are present and correct. Assert reopened store.wal_seq() == 55.
+
+- id: TEST-CM-005
+  title: query(rag_filter=True) applies H18 confidence threshold
+  requirement_id: REQ-CM-005
+  type: unit
+  file: tests/test_query.py
+  function: test_rag_filter_confidence_threshold
+  description: >
+    Insert records at confidence 0.9, 0.6, 0.5, 0.0. query(rag_filter=True)
+    must return exactly those with confidence >= 0.6 and status == "active".
+    A tombstoned record at confidence 0.9 must not be returned.
+
+- id: TEST-CM-006
+  title: delete() tombstones record without physical removal
+  requirement_id: REQ-CM-006
+  type: unit
+  file: tests/test_store.py
+  function: test_tombstone_no_physical_removal
+  description: >
+    Upsert a record. Call delete(record_id). Assert get(record_id) still returns
+    the record (not None). Assert record.status == "tombstone". Assert events.wal
+    contains both the original upsert and the delete event (WAL line count >= 2).
+    Assert query(status="active") does not include the tombstoned record.
+
+- id: TEST-CM-007
+  title: WAL write is atomic — no partial write on simulated crash
+  requirement_id: REQ-CM-007
+  type: unit
+  file: tests/test_wal_chain.py
+  function: test_atomic_wal_write
+  description: >
+    Mock os.replace to raise OSError after the tmp write. Assert the original
+    events.wal is unchanged (fallback path may write directly). Assert
+    chain_valid() returns True on the resulting file.
+
+- id: TEST-CM-008
+  title: migrate_from_json() is idempotent
+  requirement_id: REQ-CM-008
+  type: unit
+  file: tests/test_store.py
+  function: test_migrate_from_json_idempotent
+  description: >
+    Create a fake .specsmith/ dir with requirements.json and testcases.json.
+    Run migrate_from_json() twice. Assert record count equals the number of
+    unique IDs (no duplicates). Assert all records have source_type="observed".
+    Assert governance status "implemented" maps to ESDB status "active".
+
+- id: TEST-CM-009
+  title: chronomemory imports without any external package installed
+  requirement_id: REQ-CM-009
+  type: unit
+  file: tests/test_store.py
+  function: test_zero_external_deps
+  description: >
+    Import chronomemory in a subprocess with PYTHONPATH restricted to stdlib +
+    the chronomemory package itself. Assert no ImportError is raised. Assert
+    ChronoStore, ChronoRecord, WalEvent, EsdbBridge are all importable.
+
+- id: TEST-CM-010
+  title: WAL written by one project is readable by another
+  requirement_id: REQ-CM-010
+  type: integration
+  file: tests/test_wal_chain.py
+  function: test_cross_project_wal_compatibility
+  description: >
+    Write a WAL in one temp dir using ChronoStore. Copy events.wal to a second
+    temp dir. Open a new ChronoStore on the second dir. Assert all records are
+    present. Assert chain_valid() == True on the second store.
