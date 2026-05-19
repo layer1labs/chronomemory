@@ -2,6 +2,27 @@
 
 This project is governed by **specsmith**.
 
+## Session Bootstrap
+
+Run these four steps at the start of **every** session before touching any code:
+
+```bash
+# 1. Update specsmith to latest dev
+pip install --pre --upgrade specsmith
+
+# 2. Migrate project scaffold if behind installed version
+specsmith migrate-project --project-dir .
+
+# 3. Verify governance health
+specsmith audit --project-dir .
+
+# 4. Confirm machine state matches governance YAML
+specsmith sync --project-dir .
+```
+
+Only proceed with the requested task once all four steps complete without errors.
+If `audit` reports failures, surface them to the user before starting work.
+
 ## For AI Agents
 
 All governance rules, session state, requirements, and epistemic constraints
@@ -68,7 +89,7 @@ docs/
 
 ```bash
 pip install -e ".[dev]"
-pytest tests/ -v             # run all 113 tests
+pytest tests/ -v             # run all 192 tests
 ruff check src/ tests/       # lint (must be clean)
 mypy src/chronomemory/       # type-check
 ```
@@ -79,35 +100,14 @@ mypy src/chronomemory/       # type-check
 |---------|--------|
 | `specsmith preflight "<intent>"` | Gate any change; get work item ID |
 | `specsmith phase show` | Current phase + readiness % |
-| `specsmith phase next` | Advance to next AEE phase |
 | `specsmith audit` | Full governance health check |
-| `specsmith import` | Import requirements from ESDB |
-| `specsmith trace seal decision "<msg>"` | Record architectural decision |
 | `specsmith serve` | Start REST API on port 7700 |
 
-
 ---
-## Governance commands (specsmith_run / /specsmith)
 
-All specsmith governance operations should be invoked through the
-``specsmith_run`` agent tool or the ``/specsmith`` REPL slash command.
-
-**In the Nexus REPL:**
+## Governance commands
 
 ```
-/specsmith save               # backup + commit + push governance state
-/specsmith load               # pull + restore governance state
-/specsmith audit --strict     # strict governance audit
-/specsmith status             # show governance status
-/specsmith push               # git push governance changes
-/specsmith pull               # git pull governance changes
-/specsmith sync               # full two-way sync
-/specsmith watch              # watch CI and block until green
+/specsmith save    /specsmith load    /specsmith audit --strict
+/specsmith sync    /specsmith push    /specsmith pull
 ```
-
-**Verb shortcuts** (single word, no prefix needed in tool calls):
-``save``, ``load``, ``push``, ``pull``, ``sync``, ``audit``, ``status``,
-``watch``, ``commit``, ``validate``, ``doctor``, ``run``.
-
-These are all equivalent: ``specsmith_run("save")``,
-``specsmith_run("/specsmith save")``, ``specsmith_run("specsmith save")``.
