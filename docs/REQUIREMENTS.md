@@ -8,14 +8,18 @@
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s2.4
 - **Test_Ids:** ['TEST-CM-001']
+- **Platform:** all (Windows, Linux, macOS) | Python 3.10-3.13
+- **Boundary:** Single-writer process; WAL at <project>/.chronomemory/events.wal
 
 ## REQ-CM-002. NDJSON Wire Format
 - **ID:** REQ-CM-002
 - **Title:** NDJSON Wire Format
-- **Description:** The WAL must use NDJSON (Newline-Delimited JSON) as the canonical wire format. Each line in events.wal is a complete, independently parseable JSON object. Binary formats (e.g. bincode) are an optional Phase 2 optimisation and must not be the default format.
+- **Description:** The WAL must use NDJSON (Newline-Delimited JSON) as the canonical wire format. Each line in events.wal is a complete, independently parseable JSON object. Binary formats (e.g. bincode) are a Phase 2 optimisation only; NDJSON is the required default. Boundary: events.wal file format.
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s2.4
 - **Test_Ids:** ['TEST-CM-002']
+- **Platform:** all
+- **Boundary:** events.wal; binary formats (bincode) are Phase 2 only
 
 ## REQ-CM-003. OEA Anti-Hallucination Fields on Every Record
 - **ID:** REQ-CM-003
@@ -24,6 +28,8 @@
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s3
 - **Test_Ids:** ['TEST-CM-003']
+- **Platform:** all
+- **Boundary:** Every ChronoRecord written to WAL
 
 ## REQ-CM-004. Snapshot and WAL Tail Replay on Open
 - **ID:** REQ-CM-004
@@ -32,6 +38,8 @@
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s2.4
 - **Test_Ids:** ['TEST-CM-004']
+- **Platform:** all
+- **Boundary:** <project>/.chronomemory/snapshot.json; trigger at 50 events
 
 ## REQ-CM-005. Confidence-Filtered RAG Query (H18)
 - **ID:** REQ-CM-005
@@ -40,6 +48,8 @@
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s3 s6
 - **Test_Ids:** ['TEST-CM-005']
+- **Platform:** all
+- **Boundary:** In-memory state; default threshold 0.6
 
 ## REQ-CM-006. Tombstone Semantics - No Physical Deletion
 - **ID:** REQ-CM-006
@@ -48,6 +58,8 @@
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s2.3
 - **Test_Ids:** ['TEST-CM-006']
+- **Platform:** all
+- **Boundary:** WAL and in-memory state; no physical removal ever
 
 ## REQ-CM-007. Atomic WAL Writes
 - **ID:** REQ-CM-007
@@ -56,14 +68,18 @@
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s2.4
 - **Test_Ids:** ['TEST-CM-007']
+- **Platform:** all
+- **Boundary:** Write path; .wal.tmp temp file in .chronomemory/
 
 ## REQ-CM-008. Idempotent JSON Migration
 - **ID:** REQ-CM-008
 - **Title:** Idempotent JSON Migration
-- **Description:** migrate_from_json(specsmith_dir) must import .specsmith/*.json using upsert semantics. Records with unchanged id+label+status must be skipped. Governance status maps to ESDB status (different concepts, must not be conflated).
+- **Description:** migrate_from_json(specsmith_dir) must import .specsmith/*.json using upsert semantics. Records with unchanged id+label+status must be skipped. Governance status (defined/implemented/...) maps to ESDB status (active/deprecated) — they are distinct concepts and must remain separate in all mapping logic.
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s5.3
 - **Test_Ids:** ['TEST-CM-008']
+- **Platform:** all
+- **Boundary:** .specsmith/requirements.json and .specsmith/testcases.json
 
 ## REQ-CM-009. Zero Runtime Dependencies
 - **ID:** REQ-CM-009
@@ -72,14 +88,18 @@
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s11
 - **Test_Ids:** ['TEST-CM-009']
+- **Platform:** all
+- **Boundary:** pyproject.toml [project.dependencies] must be empty
 
 ## REQ-CM-010. Cross-Repo WAL Compatibility
 - **ID:** REQ-CM-010
 - **Title:** Cross-Repo WAL Compatibility
-- **Description:** All projects importing chronomemory must produce WAL files mutually readable by any other project using the same version. NDJSON format and SHA-256 algorithm must not vary between consumers.
+- **Description:** All projects importing chronomemory must produce WAL files mutually readable by any other project using the same version. The NDJSON format and SHA-256 algorithm are invariant across all consumers and versions.
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s2.4 s9
 - **Test_Ids:** ['TEST-CM-010']
+- **Platform:** all
+- **Boundary:** Cross-project WAL interchange; format must be stable across consumers
 
 ## REQ-CM-011. Cross-Platform Compatibility
 - **ID:** REQ-CM-011
@@ -88,6 +108,8 @@
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s11
 - **Test_Ids:** ['TEST-CM-011']
+- **Platform:** Windows, Linux, macOS | Python 3.10-3.13
+- **Boundary:** WAL file I/O; CRLF vs LF line endings; filesystem path separators
 
 ## REQ-CM-012. Graceful Corruption Recovery
 - **ID:** REQ-CM-012
@@ -96,6 +118,8 @@
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s2.4
 - **Test_Ids:** ['TEST-CM-012']
+- **Platform:** all
+- **Boundary:** WAL replay and snapshot load paths
 
 ## REQ-CM-013. Startup Performance - Snapshot Plus Tail Replay
 - **ID:** REQ-CM-013
@@ -104,6 +128,8 @@
 - **Status:** defined
 - **Source:** ESDB-Specification.md s2.4
 - **Test_Ids:** ['TEST-CM-013']
+- **Platform:** all
+- **Boundary:** open() on a store with 10000+ events + valid snapshot
 
 ## REQ-CM-014. EsdbBridge Delegation and JSON Fallback
 - **ID:** REQ-CM-014
@@ -112,6 +138,8 @@
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s5.3
 - **Test_Ids:** ['TEST-CM-014']
+- **Platform:** all
+- **Boundary:** Reads .chronomemory/events.wal; falls back to .specsmith/*.json
 
 ## REQ-CM-015. Typed Dependency Graph (DepGraph)
 - **ID:** REQ-CM-015
@@ -120,6 +148,8 @@
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s13
 - **Test_Ids:** ['TEST-CM-015']
+- **Platform:** all
+- **Boundary:** In-memory and optionally WAL-backed via kind=edge ChronoRecords
 
 ## REQ-CM-016. Epistemic Rollback and Cascade Propagation
 - **ID:** REQ-CM-016
@@ -128,6 +158,8 @@
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s12
 - **Test_Ids:** ['TEST-CM-016']
+- **Platform:** all
+- **Boundary:** Writes WAL events for every change; rollback_event covers cascade
 
 ## REQ-CM-017. Context Pack Compiler
 - **ID:** REQ-CM-017
@@ -136,6 +168,8 @@
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s18
 - **Test_Ids:** ['TEST-CM-017']
+- **Platform:** all
+- **Boundary:** Reads in-memory state; token estimate = (len(label)+len(str(data))) // 4
 
 ## REQ-CM-018. Extended Query API - ESDB Spec s23 Functions
 - **ID:** REQ-CM-018
@@ -144,6 +178,8 @@
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s23
 - **Test_Ids:** ['TEST-CM-018']
+- **Platform:** all
+- **Boundary:** All functions take ChronoStore as first arg; optional DepGraph second
 
 ## REQ-CM-019. Token Metrics Tracking
 - **ID:** REQ-CM-019
@@ -152,6 +188,8 @@
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s19
 - **Test_Ids:** ['TEST-CM-019']
+- **Platform:** all
+- **Boundary:** kind=token_metric WAL records; metrics survive replay
 
 ## REQ-CM-020. Skill System - First-Class Skill Records
 - **ID:** REQ-CM-020
@@ -160,6 +198,8 @@
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s21
 - **Test_Ids:** ['TEST-CM-020']
+- **Platform:** all
+- **Boundary:** kind=skill and kind=skill_run WAL records; keyword match on activation
 
 ## REQ-CM-021. ChronoStore Phase 2 Convenience Methods
 - **ID:** REQ-CM-021
@@ -168,4 +208,6 @@
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s13 s18 s19 s21 s23
 - **Test_Ids:** ['TEST-CM-021']
+- **Platform:** all
+- **Boundary:** Convenience wrappers on ChronoStore; lazy-imported to avoid circular imports
 
