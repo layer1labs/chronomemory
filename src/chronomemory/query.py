@@ -22,9 +22,7 @@ if TYPE_CHECKING:
 
 # Infrastructure record kinds that must never appear in knowledge query results.
 # These are system bookkeeping records, not agent-facing beliefs.
-_INFRA_KINDS: frozenset[str] = frozenset(
-    ["edge", "rollback_event", "token_metric", "skill_run"]
-)
+_INFRA_KINDS: frozenset[str] = frozenset(["edge", "rollback_event", "token_metric", "skill_run"])
 
 # ---------------------------------------------------------------------------
 # §23 — Functions with Rust reference implementations (implement first)
