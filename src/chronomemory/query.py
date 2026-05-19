@@ -20,6 +20,12 @@ if TYPE_CHECKING:
     from chronomemory.deps import DepGraph
     from chronomemory.store import ChronoRecord, ChronoStore
 
+# Infrastructure record kinds that must never appear in knowledge query results.
+# These are system bookkeeping records, not agent-facing beliefs.
+_INFRA_KINDS: frozenset[str] = frozenset(
+    ["edge", "rollback_event", "token_metric", "skill_run"]
+)
+
 # ---------------------------------------------------------------------------
 # §23 — Functions with Rust reference implementations (implement first)
 # ---------------------------------------------------------------------------
@@ -31,9 +37,16 @@ def what_is_known(
 ) -> list[ChronoRecord]:
     """Return all active, high-confidence records (confidence ≥ 0.6).
 
+    Infrastructure record kinds (edge, rollback_event, token_metric, skill_run)
+    are excluded when no ``kind`` filter is specified, as they are system
+    bookkeeping records rather than agent-facing beliefs.
+
     Mirrors Rust: ``what_is_known`` in query.rs.
     """
-    return store.query(kind=kind, rag_filter=True)
+    results = store.query(kind=kind, rag_filter=True)
+    if kind is None:
+        return [r for r in results if r.kind not in _INFRA_KINDS]
+    return results
 
 
 def what_conflicts_with(
