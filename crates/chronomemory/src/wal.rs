@@ -87,7 +87,11 @@ impl WalWriter {
         if path.exists() {
             let reader = WalReader::open(&path)?;
             let (seq, prev_hash) = reader.last_seq_and_hash()?;
-            Ok(Self { path, seq, prev_hash })
+            Ok(Self {
+                path,
+                seq,
+                prev_hash,
+            })
         } else {
             if let Some(parent) = path.parent() {
                 std::fs::create_dir_all(parent).map_err(WalError::Io)?;

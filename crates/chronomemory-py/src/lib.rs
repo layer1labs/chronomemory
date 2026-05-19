@@ -139,7 +139,10 @@ impl RustChronoStore {
         // Try to parse as UUID; if string ID, scan by label prefix
         if let Ok(uuid) = record_id.parse::<Uuid>() {
             let esdb_id = EsdbId(uuid);
-            Ok(db.store.get(&esdb_id).map(|r| RustRecord { inner: r.clone() }))
+            Ok(db
+                .store
+                .get(&esdb_id)
+                .map(|r| RustRecord { inner: r.clone() }))
         } else {
             Ok(None)
         }
@@ -154,7 +157,11 @@ impl RustChronoStore {
         min_confidence: f64,
     ) -> PyResult<Vec<RustRecord>> {
         let db = self.inner.lock().unwrap();
-        let threshold = if rag_filter { 0.6f64.max(min_confidence) } else { min_confidence };
+        let threshold = if rag_filter {
+            0.6f64.max(min_confidence)
+        } else {
+            min_confidence
+        };
 
         let all_ids = db.store.all_ids();
         let mut results = Vec::new();
@@ -202,7 +209,8 @@ impl RustChronoStore {
     /// Verify WAL hash chain integrity.
     fn chain_valid(&self) -> PyResult<bool> {
         let db = self.inner.lock().unwrap();
-        db.verify_chain().map_err(|e| PyRuntimeError::new_err(e.to_string()))
+        db.verify_chain()
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()))
     }
 
     /// Current WAL sequence number.
@@ -274,6 +282,9 @@ fn _chronomemory_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<RustRecord>()?;
     m.add_class::<RustChronoStore>()?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
-    m.add("__doc__", "Rust-accelerated ChronoMemory ESDB engine (PyO3 bindings)")?;
+    m.add(
+        "__doc__",
+        "Rust-accelerated ChronoMemory ESDB engine (PyO3 bindings)",
+    )?;
     Ok(())
 }
