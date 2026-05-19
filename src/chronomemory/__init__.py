@@ -2,6 +2,15 @@
 # Copyright (c) 2026 Layer1Labs Silicon, Inc. / BitConcepts, LLC.
 """chronomemory — Epistemic State Database for agentic AI workflows.
 
+Optional Rust acceleration:
+    Build the Rust extension with maturin to enable a faster backend::
+
+        pip install maturin
+        maturin develop --manifest-path crates/chronomemory-py/Cargo.toml
+
+    When the ``_chronomemory_rust`` extension is present it is imported
+    automatically and ``RUST_BACKEND`` is set to ``True``.
+
 Quick start::
 
     from chronomemory import ChronoStore, ChronoRecord
@@ -21,6 +30,14 @@ Quick start::
 Spec: ESDB-Specification.md v1.0 (Layer1Labs / BitConcepts)
 """
 
+# ---------------------------------------------------------------------------
+# Optional Rust acceleration
+# ---------------------------------------------------------------------------
+# Try to import the PyO3-compiled extension module. If unavailable (e.g. the
+# Rust extension has not been built yet), fall back silently to pure Python.
+# Build with: maturin develop --manifest-path crates/chronomemory-py/Cargo.toml
+from typing import Any
+
 from chronomemory.bridge import (
     EsdbBridge,
     EsdbRecord,
@@ -35,6 +52,19 @@ from chronomemory.store import (
     WalEvent,
     open_store,
 )
+
+RustChronoStore: Any | None = None
+RustRecord: Any | None = None
+RUST_BACKEND: bool = False
+
+try:
+    import _chronomemory_rust as _rust  # noqa: PLC0415
+
+    RustChronoStore = _rust.RustChronoStore
+    RustRecord = _rust.RustRecord
+    RUST_BACKEND = True
+except ImportError:
+    pass
 
 __version__ = "0.1.0"
 __all__ = [
@@ -57,4 +87,8 @@ __all__ = [
     "ContextPack",
     "ContextPackCompiler",
     "ContextPackEntry",
+    # Phase 3: optional Rust acceleration
+    "RustChronoStore",
+    "RustRecord",
+    "RUST_BACKEND",
 ]

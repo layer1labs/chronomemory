@@ -1,3 +1,6 @@
 [workspace]
-members = ["crates/chronomemory"]
+members = [
+    "crates/chronomemory",
+    "crates/chronomemory-py",
+]
 resolver = "2"
