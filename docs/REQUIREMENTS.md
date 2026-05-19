@@ -141,25 +141,25 @@
 - **Platform:** all
 - **Boundary:** Reads .chronomemory/events.wal; falls back to .specsmith/*.json
 
-## REQ-CM-015. Typed Dependency Graph (DepGraph)
+## REQ-CM-015. Typed Dependency Graph - Core Interface and BFS Traversal
 - **ID:** REQ-CM-015
-- **Title:** Typed Dependency Graph (DepGraph)
-- **Description:** src/chronomemory/deps.py must provide a DepGraph class with 9 typed edge types per ESDB spec s13: assumes, contradicts, depends_on, derived_from, generated_from, invalidates, supports, supersedes, validated_by. Must expose add_edge(from_id, to_id, edge_type) raising ValueError on unknown types, remove_edge, what_depends_on, what_contradicts, what_assumes, predecessors, successors, transitive_successors (BFS, circular-dep safe), and transitive_predecessors. When a ChronoStore is provided, edges are persisted as ChronoRecord(kind=edge) via the normal upsert path so chain_valid() covers them and they survive replay. DepGraph.from_store(store) reconstructs all edges from kind=edge records.
+- **Title:** Typed Dependency Graph - Core Interface and BFS Traversal
+- **Description:** src/chronomemory/deps.py must provide a DepGraph class with 9 typed edge types per ESDB spec s13 (assumes, contradicts, depends_on, derived_from, generated_from, invalidates, supports, supersedes, validated_by). add_edge must raise ValueError on unknown types. Query operations must include what_depends_on, what_contradicts, what_assumes, predecessors, successors, and BFS traversal (transitive_successors, transitive_predecessors) that is safe against circular dependencies.
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s13
 - **Test_Ids:** ['TEST-CM-015']
 - **Platform:** all
-- **Boundary:** In-memory and optionally WAL-backed via kind=edge ChronoRecords
+- **Boundary:** In-memory graph; edge types validated at write time
 
-## REQ-CM-016. Epistemic Rollback and Cascade Propagation
+## REQ-CM-016. Epistemic Rollback - Cascade Propagation Logic
 - **ID:** REQ-CM-016
-- **Title:** Epistemic Rollback and Cascade Propagation
-- **Description:** src/chronomemory/rollback.py must provide invalidate(record_id, reason, store, dep_graph) -> RollbackReport that: (1) sets target status=invalidated via WAL upsert; (2) BFS-walks predecessors via depends_on and derived_from edges (circular-dep safe); (3) cascades by setting status=hypothesis, halving confidence, setting is_hypothesis=True on each predecessor; (4) writes a rollback_event WAL record. ChronoStore.invalidate() must delegate to this. ESDB Invariants 2, 4, 5 enforced.
+- **Title:** Epistemic Rollback - Cascade Propagation Logic
+- **Description:** invalidate(record_id, reason, store, dep_graph) -> RollbackReport must cascade invalidation downstream from the target record through all depends_on/derived_from predecessors reachable via BFS (circular-dep safe), downgrading each predecessor to status=hypothesis with halved confidence.
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s12
 - **Test_Ids:** ['TEST-CM-016']
 - **Platform:** all
-- **Boundary:** Writes WAL events for every change; rollback_event covers cascade
+- **Boundary:** BFS bounded by dep graph; ESDB Invariants 2, 4, 5 satisfied
 
 ## REQ-CM-017. Context Pack Compiler
 - **ID:** REQ-CM-017
@@ -191,15 +191,15 @@
 - **Platform:** all
 - **Boundary:** kind=token_metric WAL records; metrics survive replay
 
-## REQ-CM-020. Skill System - First-Class Skill Records
+## REQ-CM-020. Skill System - find_skills Keyword Matching
 - **ID:** REQ-CM-020
-- **Title:** Skill System - First-Class Skill Records
-- **Description:** src/chronomemory/metrics.py must provide find_skills(store, task_label) returning kind=skill records whose data[activation] list shares >= 1 keyword (case-insensitive) with task_label. record_skill_run(store, skill_id, success, tokens_used, output) writes a kind=skill_run WAL record with confidence=1.0 on success and 0.5 on failure. ChronoStore must expose find_skills and record_skill_run as convenience methods.
+- **Title:** Skill System - find_skills Keyword Matching
+- **Description:** find_skills(store, task_label) must return all kind=skill ChronoRecords whose data["activation"] list shares at least one keyword with task_label (case-insensitive word intersection). Skills are stored as normal ChronoRecord(kind="skill") entries and are queryable via store.query(kind="skill"). ChronoStore must expose find_skills as a convenience method.
 - **Status:** implemented
 - **Source:** ESDB-Specification.md s21
 - **Test_Ids:** ['TEST-CM-020']
 - **Platform:** all
-- **Boundary:** kind=skill and kind=skill_run WAL records; keyword match on activation
+- **Boundary:** kind=skill WAL records; case-insensitive keyword match on activation list
 
 ## REQ-CM-021. ChronoStore Phase 2 Convenience Methods
 - **ID:** REQ-CM-021
@@ -210,4 +210,34 @@
 - **Test_Ids:** ['TEST-CM-021']
 - **Platform:** all
 - **Boundary:** Convenience wrappers on ChronoStore; lazy-imported to avoid circular imports
+
+## REQ-CM-022. DepGraph WAL Persistence and Replay
+- **ID:** REQ-CM-022
+- **Title:** DepGraph WAL Persistence and Replay
+- **Description:** When DepGraph is constructed with a ChronoStore, add_edge must persist each edge as a ChronoRecord(kind="edge") via the standard WAL upsert path so that edges survive replay and chain_valid() covers them without special handling. remove_edge must tombstone the edge record. DepGraph.from_store(store) must reconstruct all non-tombstoned edges by querying kind="edge" records.
+- **Status:** implemented
+- **Source:** ESDB-Specification.md s13
+- **Test_Ids:** ['TEST-CM-022']
+- **Platform:** all
+- **Boundary:** kind=edge WAL records; DepGraph.from_store() reconstructs on reopen
+
+## REQ-CM-023. Rollback WAL Event and ChronoStore Integration
+- **ID:** REQ-CM-023
+- **Title:** Rollback WAL Event and ChronoStore Integration
+- **Description:** The invalidate() cascade must record a kind=rollback_event ChronoRecord in the WAL summarising the operation outcome (target_id, reason, affected_ids, cascaded_count) so the full invalidation event is auditable and chain_valid() covers it. ChronoStore provides a convenience wrapper.
+- **Status:** implemented
+- **Source:** ESDB-Specification.md s12
+- **Test_Ids:** ['TEST-CM-023']
+- **Platform:** all
+- **Boundary:** rollback_event WAL record; chain_valid() covers rollback events
+
+## REQ-CM-024. Skill System - record_skill_run WAL Record
+- **ID:** REQ-CM-024
+- **Title:** Skill System - record_skill_run WAL Record
+- **Description:** record_skill_run(store, skill_id, success, tokens_used, output) must write a kind=skill_run ChronoRecord with confidence=1.0 on success or 0.5 on failure, carrying skill_id, tokens_used, and output in the data payload. ChronoStore provides a convenience wrapper.
+- **Status:** implemented
+- **Source:** ESDB-Specification.md s21
+- **Test_Ids:** ['TEST-CM-024']
+- **Platform:** all
+- **Boundary:** kind=skill_run WAL records; confidence reflects execution outcome
 

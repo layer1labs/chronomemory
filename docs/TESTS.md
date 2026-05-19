@@ -203,3 +203,30 @@
 - **Verification Method:** evaluator
 - **Confidence:** 1.0
 
+## TEST-CM-022. DepGraph WAL persistence and replay after reopen
+- **ID:** TEST-CM-022
+- **Title:** DepGraph WAL persistence and replay after reopen
+- **Description:** Three integration tests: (1) add_edge with a store persists a kind=edge ChronoRecord to the WAL with correct from_id, to_id, edge_type fields; (2) after close+reopen, DepGraph.from_store() reconstructs all edges; (3) chain_valid() returns True after adding edges, confirming edge records go through the normal WAL upsert chain without special handling.
+- **Requirement ID:** REQ-CM-022
+- **Type:** integration
+- **Verification Method:** evaluator
+- **Confidence:** 1.0
+
+## TEST-CM-023. Rollback WAL event and ChronoStore.invalidate delegation
+- **ID:** TEST-CM-023
+- **Title:** Rollback WAL event and ChronoStore.invalidate delegation
+- **Description:** Three tests: (1) invalidate() writes a kind=rollback_event WAL record with correct target_id in data; (2) chain_valid() remains True after rollback operations confirming rollback events integrate with the WAL chain; (3) ChronoStore.invalidate(record_id, reason, dep_graph) delegates to rollback.invalidate() and returns a RollbackReport instance.
+- **Requirement ID:** REQ-CM-023
+- **Type:** unit
+- **Verification Method:** evaluator
+- **Confidence:** 1.0
+
+## TEST-CM-024. record_skill_run WAL record and confidence values
+- **ID:** TEST-CM-024
+- **Title:** record_skill_run WAL record and confidence values
+- **Description:** Three tests: (1) record_skill_run writes a kind=skill_run WAL record with correct skill_id, success=True, and confidence=1.0; (2) a failed skill run writes confidence=0.5; (3) ChronoStore.record_skill_run convenience method delegates correctly and chain_valid() remains True after both runs.
+- **Requirement ID:** REQ-CM-024
+- **Type:** unit
+- **Verification Method:** evaluator
+- **Confidence:** 1.0
+

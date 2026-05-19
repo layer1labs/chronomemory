@@ -229,5 +229,38 @@
     "input": {},
     "expected_behavior": {},
     "confidence": 1.0
+  },
+  {
+    "id": "TEST-CM-022",
+    "title": "DepGraph WAL persistence and replay after reopen",
+    "description": "Three integration tests: (1) add_edge with a store persists a kind=edge ChronoRecord to the WAL with correct from_id, to_id, edge_type fields; (2) after close+reopen, DepGraph.from_store() reconstructs all edges; (3) chain_valid() returns True after adding edges, confirming edge records go through the normal WAL upsert chain without special handling.",
+    "requirement_id": "REQ-CM-022",
+    "type": "integration",
+    "verification_method": "evaluator",
+    "input": {},
+    "expected_behavior": {},
+    "confidence": 1.0
+  },
+  {
+    "id": "TEST-CM-023",
+    "title": "Rollback WAL event and ChronoStore.invalidate delegation",
+    "description": "Three tests: (1) invalidate() writes a kind=rollback_event WAL record with correct target_id in data; (2) chain_valid() remains True after rollback operations confirming rollback events integrate with the WAL chain; (3) ChronoStore.invalidate(record_id, reason, dep_graph) delegates to rollback.invalidate() and returns a RollbackReport instance.",
+    "requirement_id": "REQ-CM-023",
+    "type": "unit",
+    "verification_method": "evaluator",
+    "input": {},
+    "expected_behavior": {},
+    "confidence": 1.0
+  },
+  {
+    "id": "TEST-CM-024",
+    "title": "record_skill_run WAL record and confidence values",
+    "description": "Three tests: (1) record_skill_run writes a kind=skill_run WAL record with correct skill_id, success=True, and confidence=1.0; (2) a failed skill run writes confidence=0.5; (3) ChronoStore.record_skill_run convenience method delegates correctly and chain_valid() remains True after both runs.",
+    "requirement_id": "REQ-CM-024",
+    "type": "unit",
+    "verification_method": "evaluator",
+    "input": {},
+    "expected_behavior": {},
+    "confidence": 1.0
   }
 ]
