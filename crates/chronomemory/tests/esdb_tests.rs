@@ -27,10 +27,8 @@ fn test_wal_hash_chain_integrity() {
 }
 
 // TEST-ESDB-002: WAL replay produces identical materialized state
-// NOTE: bincode serialization of serde_json::Value across sessions requires
-// data field migration to raw bytes. Tracked for Phase 2 optimization.
+// NDJSON WAL format (Phase 3) makes replay fully deterministic.
 #[test]
-#[ignore = "requires data field migration from serde_json::Value to raw bytes"]
 fn test_replay_produces_identical_state() {
     let dir = TempDir::new().unwrap();
     let esdb_path = dir.path().join("replay.esdb");

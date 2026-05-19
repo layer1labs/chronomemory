@@ -1,0 +1,20 @@
+[package]
+name = "chronomemory-py"
+version = "0.1.0"
+edition = "2021"
+description = "PyO3 Python bindings for the ChronoMemory Rust ESDB engine"
+license = "MIT"
+authors = ["Layer1Labs", "BitConcepts, LLC"]
+
+[lib]
+name = "_chronomemory_rust"
+crate-type = ["cdylib"]
+
+[dependencies]
+chronomemory = { path = "../chronomemory" }
+pyo3 = { version = "0.24", features = ["extension-module"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+tempfile = "3"

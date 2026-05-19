@@ -20,7 +20,7 @@ use metrics::AggregateMetrics;
 use projection::{ProjectionConfig, Proposal};
 use store::Store;
 use types::*;
-use wal::{EventType, WalWriter};
+use wal::WalWriter;
 
 use std::path::{Path, PathBuf};
 
@@ -78,9 +78,9 @@ impl Esdb {
     /// Commit an accepted record to the ESDB (WAL + materialized state).
     pub fn commit(&mut self, record: Record) -> Result<EsdbId, EsdbError> {
         let id = record.id;
-        let payload = bincode::serialize(&record).map_err(EsdbError::Serialize)?;
+        let payload = serde_json::to_value(&record).map_err(EsdbError::Serialize)?;
         self.wal
-            .append(EventType::Insert, id, &payload)
+            .append("upsert", &id, payload)
             .map_err(EsdbError::Wal)?;
         self.store.upsert(record);
         Ok(id)
@@ -100,9 +100,9 @@ impl Esdb {
             confidence: Confidence::default(),
             created_at: chrono::Utc::now(),
         };
-        let payload = bincode::serialize(&edge).map_err(EsdbError::Serialize)?;
+        let payload = serde_json::to_value(&edge).map_err(EsdbError::Serialize)?;
         self.wal
-            .append(EventType::AddEdge, from, &payload)
+            .append("add_edge", &from, payload)
             .map_err(EsdbError::Wal)?;
         self.dep_graph.add_edge(from, to, edge_type);
         Ok(())
@@ -117,15 +117,18 @@ impl Esdb {
         let result = rollback::rollback(id, reason, &mut self.store, &self.dep_graph);
 
         // Write rollback event to WAL
-        let payload = bincode::serialize(&result.invalidated_ids).map_err(EsdbError::Serialize)?;
+        let rollback_payload = serde_json::json!({
+            "reason": reason,
+            "invalidated_ids": result.invalidated_ids.iter().map(|i| i.to_string()).collect::<Vec<_>>(),
+        });
         self.wal
-            .append(EventType::Rollback, *id, &payload)
+            .append("rollback", id, rollback_payload)
             .map_err(EsdbError::Wal)?;
 
         // Write individual invalidation events for each cascaded record
         for inv_id in &result.invalidated_ids {
             self.wal
-                .append(EventType::Invalidate, *inv_id, &[])
+                .append("invalidate", inv_id, serde_json::Value::Null)
                 .map_err(EsdbError::Wal)?;
         }
 
@@ -139,9 +142,10 @@ impl Esdb {
 
     /// Record a token metric.
     pub fn record_metric(&mut self, metric: TokenMetricData) -> Result<(), EsdbError> {
-        let payload = bincode::serialize(&metric).map_err(EsdbError::Serialize)?;
+        let task_id = metric.task_id;
+        let payload = serde_json::to_value(&metric).map_err(EsdbError::Serialize)?;
         self.wal
-            .append(EventType::RecordMetric, metric.task_id, &payload)
+            .append("metric", &task_id, payload)
             .map_err(EsdbError::Wal)?;
         self.metrics.record(&metric);
         Ok(())
@@ -180,6 +184,6 @@ pub enum EsdbError {
     Io(std::io::Error),
     #[error("WAL error: {0}")]
     Wal(wal::WalError),
-    #[error("Serialization error: {0}")]
-    Serialize(bincode::Error),
+    #[error("Serialisation error: {0}")]
+    Serialize(serde_json::Error),
 }
