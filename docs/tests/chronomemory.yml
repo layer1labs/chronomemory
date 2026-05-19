@@ -155,8 +155,117 @@
   type: unit
   file: tests/test_bridge.py
   function: TestEsdbBridgeStatus
-  description: >
+  description: >-
     With WAL: status().backend contains 'ChronoStore'. requirements() and
     testcases() return records from the WAL. upsert_record() returns True.
     Without WAL: status().backend contains 'json'. requirements() returns
     records from .specsmith/requirements.json. upsert_record() returns False.
+
+# ---------------------------------------------------------------------------
+# Phase 2 tests (TEST-CM-015..021)
+# ---------------------------------------------------------------------------
+
+- id: TEST-CM-015
+  title: DepGraph edge operations and WAL persistence
+  requirement_id: REQ-CM-015
+  type: unit
+  file: tests/test_deps.py
+  function: multiple
+  description: >-
+    12 tests covering: EDGE_TYPES frozenset has all 9 types; DepGraph starts
+    empty; add_edge stores in memory; invalid edge type raises ValueError;
+    remove_edge deletes (no-op for missing); multiple edges stored; what_depends_on
+    returns correct predecessors; what_contradicts is bidirectional; what_assumes
+    returns outgoing; transitive_successors follows chains; transitive_successors
+    guards circular deps; add_edge with store persists kind=edge WAL record;
+    from_store reloads edges after close+reopen; chain_valid() True after edges.
+
+- id: TEST-CM-016
+  title: Epistemic rollback cascade and WAL coverage
+  requirement_id: REQ-CM-016
+  type: unit
+  file: tests/test_rollback.py
+  function: multiple
+  description: >-
+    10 tests covering: invalidate sets target status=invalidated; missing
+    record returns report with no direct_change; cascade 1-level (depends_on);
+    cascade 2-level (derived_from chain); confidence halved on cascade;
+    affected_ids includes target + all cascaded; circular dependency terminates;
+    rollback_event WAL record written; chain_valid True after rollback;
+    ChronoStore.invalidate() convenience method delegates correctly.
+
+- id: TEST-CM-017
+  title: ContextPackCompiler compile, exclusions, and budget enforcement
+  requirement_id: REQ-CM-017
+  type: unit
+  file: tests/test_context_pack.py
+  function: multiple
+  description: >-
+    8 tests covering: compile() returns ContextPack instance with correct
+    task_id/goal; includes relevant records matching goal keywords; excludes
+    tombstoned records; excludes invalidated records; excludes low-confidence
+    (< 0.6) records; token_count never exceeds token_budget; entries sorted
+    by confidence desc; to_dict() produces JSON-serializable output with
+    entries and excluded keys.
+
+- id: TEST-CM-018
+  title: Extended query API - all 18 s23 functions
+  requirement_id: REQ-CM-018
+  type: unit
+  file: tests/test_query_ext.py
+  function: multiple
+  description: >-
+    28 tests covering all 18 query functions with >= 2 tests each: what_is_known
+    (confidence filter, kind filter); what_conflicts_with (with/without graph);
+    what_depends_on (with/without graph); what_changed_since (seq=0, high seq);
+    what_requires_reverification (hypothesis filter); has_this_work_been_done
+    (true/false); why_do_we_believe (chain, missing); what_context_packs_are_stale
+    (stale/clean pack); what_world_models_conflict (with/without graph);
+    what_assumptions_underlie (with/without graph); what_generated_artifacts_depend_on
+    (with/without graph); what_confidence_collapsed (low-hyp, active excluded);
+    what_can_agent_do_next (unblocked, no graph); what_should_agent_not_do
+    (stop_condition, empty store); what_skills_apply (match, no match);
+    what_state_delta_would_complete (with/without graph); is_this_action_duplicate
+    (true/false); what_context_pack_minimizes_tokens (list, no invalid).
+
+- id: TEST-CM-019
+  title: Token metrics CRUD and efficiency report
+  requirement_id: REQ-CM-019
+  type: unit
+  file: tests/test_metrics.py
+  function: multiple
+  description: >-
+    5 token-metrics tests: record_token_metric writes kind=token_metric WAL
+    record with correct task_id and total_tokens; get_token_metrics filters by
+    task_id; token_efficiency_report returns zeros for empty store; efficiency
+    report calculates tokens_per_success, avg_tool_calls, duplicate_block_rate
+    correctly across mixed success/failure tasks; ChronoStore.record_token_metric
+    convenience method works end-to-end.
+
+- id: TEST-CM-020
+  title: Skill system find and run
+  requirement_id: REQ-CM-020
+  type: unit
+  file: tests/test_metrics.py
+  function: multiple
+  description: >-
+    5 skill-system tests: find_skills matches by activation keyword intersection;
+    find_skills returns [] on no match; record_skill_run writes kind=skill_run
+    WAL record with correct skill_id and success=True at confidence=1.0; failed
+    skill run writes confidence=0.5; ChronoStore.find_skills convenience method
+    works; chain_valid() True after token metrics + skill runs.
+
+- id: TEST-CM-021
+  title: ChronoStore Phase 2 convenience methods
+  requirement_id: REQ-CM-021
+  type: unit
+  file: tests/test_metrics.py
+  function: multiple
+  description: >-
+    Covered by test_rollback.py::test_store_invalidate_method,
+    test_metrics.py::test_record_token_metric_store_method,
+    test_metrics.py::test_store_find_skills_method, and
+    test_metrics.py::test_chain_valid_after_metrics. All six ChronoStore Phase 2
+    convenience methods (invalidate, record_token_metric, get_token_metrics,
+    token_efficiency_report, find_skills, record_skill_run) must delegate
+    correctly to their module functions and produce identical results.

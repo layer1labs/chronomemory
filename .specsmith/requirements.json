@@ -1,0 +1,212 @@
+[
+  {
+    "id": "REQ-CM-001",
+    "title": "Append-Only WAL with SHA-256 Hash Chain",
+    "description": "The WAL (events.wal) must be append-only. Every event carries the SHA-256 hash of the previous event's canonical JSON payload, forming a tamper-evident chain. chain_valid() must return True iff every link in the chain is unbroken. Any truncation, reordering, or modification of a committed event must cause chain_valid() to return False.",
+    "source": "ESDB-Specification.md s2.4",
+    "status": "implemented",
+    "test_ids": [
+      "TEST-CM-001"
+    ]
+  },
+  {
+    "id": "REQ-CM-002",
+    "title": "NDJSON Wire Format",
+    "description": "The WAL must use NDJSON (Newline-Delimited JSON) as the canonical wire format. Each line in events.wal is a complete, independently parseable JSON object. Binary formats (e.g. bincode) are an optional Phase 2 optimisation and must not be the default format.",
+    "source": "ESDB-Specification.md s2.4",
+    "status": "implemented",
+    "test_ids": [
+      "TEST-CM-002"
+    ]
+  },
+  {
+    "id": "REQ-CM-003",
+    "title": "OEA Anti-Hallucination Fields on Every Record",
+    "description": "Every ChronoRecord must carry all seven OEA fields: source_type (H19), confidence (H17), evidence (H20), epistemic_boundary (H15), is_hypothesis (H20), model_assumptions (H21), recursion_depth (H16). Records migrated from legacy JSON without OEA fields must receive safe defaults. recursion_depth is stamped by the store at upsert time.",
+    "source": "ESDB-Specification.md s3",
+    "status": "implemented",
+    "test_ids": [
+      "TEST-CM-003"
+    ]
+  },
+  {
+    "id": "REQ-CM-004",
+    "title": "Snapshot and WAL Tail Replay on Open",
+    "description": "ChronoStore writes snapshot.json every 50 appended events. On open(), load snapshot and replay only events with seq > snapshot.seq. Corrupt snapshot must be discarded silently; state recovered from full WAL replay.",
+    "source": "ESDB-Specification.md s2.4",
+    "status": "implemented",
+    "test_ids": [
+      "TEST-CM-004"
+    ]
+  },
+  {
+    "id": "REQ-CM-005",
+    "title": "Confidence-Filtered RAG Query (H18)",
+    "description": "query(rag_filter=True) must return only records with confidence >= 0.6 AND status == active. Implements OEA rule H18. Default threshold 0.6; callers may override with min_confidence.",
+    "source": "ESDB-Specification.md s3 s6",
+    "status": "implemented",
+    "test_ids": [
+      "TEST-CM-005"
+    ]
+  },
+  {
+    "id": "REQ-CM-006",
+    "title": "Tombstone Semantics - No Physical Deletion",
+    "description": "delete(record_id) must write a delete WAL event and set status=tombstone in memory. Physical removal from disk is not permitted. Satisfies ESDB Invariant 2.",
+    "source": "ESDB-Specification.md s2.3",
+    "status": "implemented",
+    "test_ids": [
+      "TEST-CM-006"
+    ]
+  },
+  {
+    "id": "REQ-CM-007",
+    "title": "Atomic WAL Writes",
+    "description": "WAL appends must be atomic: write to .wal.tmp, fsync, then os.replace(). If os.replace() fails, fall back to direct append without raising.",
+    "source": "ESDB-Specification.md s2.4",
+    "status": "implemented",
+    "test_ids": [
+      "TEST-CM-007"
+    ]
+  },
+  {
+    "id": "REQ-CM-008",
+    "title": "Idempotent JSON Migration",
+    "description": "migrate_from_json(specsmith_dir) must import .specsmith/*.json using upsert semantics. Records with unchanged id+label+status must be skipped. Governance status maps to ESDB status (different concepts, must not be conflated).",
+    "source": "ESDB-Specification.md s5.3",
+    "status": "implemented",
+    "test_ids": [
+      "TEST-CM-008"
+    ]
+  },
+  {
+    "id": "REQ-CM-009",
+    "title": "Zero Runtime Dependencies",
+    "description": "The package must declare dependencies=[] in pyproject.toml and import successfully with python -S. Only stdlib modules are permitted.",
+    "source": "ESDB-Specification.md s11",
+    "status": "implemented",
+    "test_ids": [
+      "TEST-CM-009"
+    ]
+  },
+  {
+    "id": "REQ-CM-010",
+    "title": "Cross-Repo WAL Compatibility",
+    "description": "All projects importing chronomemory must produce WAL files mutually readable by any other project using the same version. NDJSON format and SHA-256 algorithm must not vary between consumers.",
+    "source": "ESDB-Specification.md s2.4 s9",
+    "status": "implemented",
+    "test_ids": [
+      "TEST-CM-010"
+    ]
+  },
+  {
+    "id": "REQ-CM-011",
+    "title": "Cross-Platform Compatibility",
+    "description": "ChronoStore must function identically on Windows, Linux, macOS on Python 3.10-3.13. CRLF line endings must be handled correctly.",
+    "source": "ESDB-Specification.md s11",
+    "status": "implemented",
+    "test_ids": [
+      "TEST-CM-011"
+    ]
+  },
+  {
+    "id": "REQ-CM-012",
+    "title": "Graceful Corruption Recovery",
+    "description": "ChronoStore must recover without raising from truncated lines, garbage JSON, missing hash fields, wrong types, binary bytes, empty WAL, whitespace-only WAL, and corrupt snapshot.",
+    "source": "ESDB-Specification.md s2.4",
+    "status": "implemented",
+    "test_ids": [
+      "TEST-CM-012"
+    ]
+  },
+  {
+    "id": "REQ-CM-013",
+    "title": "Startup Performance - Snapshot Plus Tail Replay",
+    "description": "On a store with 10000+ events and a valid snapshot, open() must complete in under 500ms. O(tail) not O(total WAL) startup.",
+    "source": "ESDB-Specification.md s2.4",
+    "status": "defined",
+    "test_ids": [
+      "TEST-CM-013"
+    ]
+  },
+  {
+    "id": "REQ-CM-014",
+    "title": "EsdbBridge Delegation and JSON Fallback",
+    "description": "EsdbBridge must delegate to ChronoStore when events.wal exists. Falls back to .specsmith/*.json when no WAL. Write ops return False without WAL.",
+    "source": "ESDB-Specification.md s5.3",
+    "status": "implemented",
+    "test_ids": [
+      "TEST-CM-014"
+    ]
+  },
+  {
+    "id": "REQ-CM-015",
+    "title": "Typed Dependency Graph (DepGraph)",
+    "description": "src/chronomemory/deps.py must provide a DepGraph class with 9 typed edge types per ESDB spec s13: assumes, contradicts, depends_on, derived_from, generated_from, invalidates, supports, supersedes, validated_by. Must expose add_edge(from_id, to_id, edge_type) raising ValueError on unknown types, remove_edge, what_depends_on, what_contradicts, what_assumes, predecessors, successors, transitive_successors (BFS, circular-dep safe), and transitive_predecessors. When a ChronoStore is provided, edges are persisted as ChronoRecord(kind=edge) via the normal upsert path so chain_valid() covers them and they survive replay. DepGraph.from_store(store) reconstructs all edges from kind=edge records.",
+    "source": "ESDB-Specification.md s13",
+    "status": "implemented",
+    "test_ids": [
+      "TEST-CM-015"
+    ]
+  },
+  {
+    "id": "REQ-CM-016",
+    "title": "Epistemic Rollback and Cascade Propagation",
+    "description": "src/chronomemory/rollback.py must provide invalidate(record_id, reason, store, dep_graph) -> RollbackReport that: (1) sets target status=invalidated via WAL upsert; (2) BFS-walks predecessors via depends_on and derived_from edges (circular-dep safe); (3) cascades by setting status=hypothesis, halving confidence, setting is_hypothesis=True on each predecessor; (4) writes a rollback_event WAL record. ChronoStore.invalidate() must delegate to this. ESDB Invariants 2, 4, 5 enforced.",
+    "source": "ESDB-Specification.md s12",
+    "status": "implemented",
+    "test_ids": [
+      "TEST-CM-016"
+    ]
+  },
+  {
+    "id": "REQ-CM-017",
+    "title": "Context Pack Compiler",
+    "description": "src/chronomemory/context_pack.py must provide ContextPackCompiler(store, dep_graph=None).compile(task_id, goal, token_budget=4096) -> ContextPack. Exclusion rules: status in tombstone/invalidated/hypothesis, confidence < 0.6, kind in infrastructure kinds (edge, rollback_event, token_metric, skill_run), label shares no word with goal. Records sorted confidence-desc; budget enforced. ContextPack.to_dict() must be JSON-serializable for LLM injection.",
+    "source": "ESDB-Specification.md s18",
+    "status": "implemented",
+    "test_ids": [
+      "TEST-CM-017"
+    ]
+  },
+  {
+    "id": "REQ-CM-018",
+    "title": "Extended Query API - ESDB Spec s23 Functions",
+    "description": "src/chronomemory/query.py must implement all 18 query functions from ESDB spec s23. Six mirror the Rust reference: what_is_known, what_conflicts_with, what_depends_on, what_changed_since, what_requires_reverification, has_this_work_been_done. Twelve are new: why_do_we_believe, what_context_packs_are_stale, what_world_models_conflict, what_assumptions_underlie, what_generated_artifacts_depend_on, what_confidence_collapsed, what_can_agent_do_next, what_should_agent_not_do, what_skills_apply, what_state_delta_would_complete, is_this_action_duplicate, what_context_pack_minimizes_tokens. All return list[ChronoRecord] or bool. Functions requiring DepGraph must degrade gracefully when dep_graph=None.",
+    "source": "ESDB-Specification.md s23",
+    "status": "implemented",
+    "test_ids": [
+      "TEST-CM-018"
+    ]
+  },
+  {
+    "id": "REQ-CM-019",
+    "title": "Token Metrics Tracking",
+    "description": "src/chronomemory/metrics.py must provide record_token_metric(store, task_id, context_tokens, input_tokens, output_tokens, tool_calls=0, elapsed_ms=0, success=True, duplicates_blocked=0, claims_rejected=0) writing a kind=token_metric WAL record. get_token_metrics(store, task_id) returns all records for that task. token_efficiency_report(store) returns {tokens_per_success, avg_tool_calls, duplicate_block_rate} across all tasks. ChronoStore must expose all three as convenience methods via lazy imports.",
+    "source": "ESDB-Specification.md s19",
+    "status": "implemented",
+    "test_ids": [
+      "TEST-CM-019"
+    ]
+  },
+  {
+    "id": "REQ-CM-020",
+    "title": "Skill System - First-Class Skill Records",
+    "description": "src/chronomemory/metrics.py must provide find_skills(store, task_label) returning kind=skill records whose data[activation] list shares >= 1 keyword (case-insensitive) with task_label. record_skill_run(store, skill_id, success, tokens_used, output) writes a kind=skill_run WAL record with confidence=1.0 on success and 0.5 on failure. ChronoStore must expose find_skills and record_skill_run as convenience methods.",
+    "source": "ESDB-Specification.md s21",
+    "status": "implemented",
+    "test_ids": [
+      "TEST-CM-020"
+    ]
+  },
+  {
+    "id": "REQ-CM-021",
+    "title": "ChronoStore Phase 2 Convenience Methods",
+    "description": "ChronoStore must expose Phase 2 operations as convenience methods via lazy imports to avoid circular dependencies: invalidate(record_id, reason, dep_graph), record_token_metric(...), get_token_metrics(task_id), token_efficiency_report(), find_skills(task_label), record_skill_run(skill_id, success, tokens_used, output). All must delegate to the respective module functions and return the same types.",
+    "source": "ESDB-Specification.md s13 s18 s19 s21 s23",
+    "status": "implemented",
+    "test_ids": [
+      "TEST-CM-021"
+    ]
+  }
+]
