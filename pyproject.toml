@@ -2,8 +2,11 @@
 requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
-# Phase 2: switch to maturin when PyO3 bindings land.
-# build-system = { requires = ["maturin>=1.4"], build-backend = "maturin" }
+# Phase 3 (optional Rust acceleration):
+# To build _chronomemory_rust.so and enable the Rust backend:
+#   pip install maturin
+#   maturin develop --manifest-path crates/chronomemory-py/Cargo.toml
+# The pure-Python implementation remains the default and requires no Rust.
 
 [project]
 name = "chronomemory"
@@ -48,6 +51,11 @@ dev = [
     "mypy>=1.10",
     "pre-commit>=3.0",
 ]
+rust = [
+    # Install maturin to build the optional Rust-accelerated backend:
+    # pip install chronomemory[rust] && maturin develop --manifest-path crates/chronomemory-py/Cargo.toml
+    "maturin>=1.4",
+]
 docs = [
     "mkdocs>=1.6",
     "mkdocs-material>=9.5",
@@ -90,6 +98,12 @@ strict = true
 warn_return_any = true
 warn_unused_configs = true
 
+[[tool.mypy.overrides]]
+# _chronomemory_rust is an optional compiled Rust extension — may not be present
+module = "_chronomemory_rust"
+ignore_missing_imports = true
+ignore_errors = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--tb=short"
@@ -97,6 +111,13 @@ addopts = "--tb=short"
 [tool.coverage.run]
 source = ["chronomemory"]
 omit = ["tests/*"]
+
+[tool.maturin]
+# Manifest for the optional PyO3 extension module.
+# Run: maturin develop --manifest-path crates/chronomemory-py/Cargo.toml
+manifest-path = "crates/chronomemory-py/Cargo.toml"
+python-source = "src"
+module-name = "_chronomemory_rust"
 
 [tool.coverage.report]
 exclude_lines = [

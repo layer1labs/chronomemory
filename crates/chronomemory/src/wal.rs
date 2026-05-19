@@ -1,72 +1,74 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Layer1Labs / BitConcepts, LLC.
-//! Append-only Write-Ahead Log with SHA-256 hash chain (Invariant 8).
+//! Append-only Write-Ahead Log — NDJSON format with SHA-256 hash chain.
 //!
-//! PHASE 2 MIGRATION REQUIRED:
-//! This WAL currently uses binary bincode format (ESDB_WAL magic header +
-//! length-prefixed bincode records). This is INCOMPATIBLE with the canonical
-//! NDJSON format used by the Python implementation (store.py) and required
-//! by ESDB-Specification.md §2.4.
+//! Each WAL entry is a single JSON object on one line (Newline-Delimited JSON).
+//! The format is cross-compatible with the Python ChronoStore implementation
+//! in src/chronomemory/store.py (ESDB-Specification.md §2.4, REQ-CM-002).
 //!
-//! Before adding PyO3 bindings or using this as shared persistence:
-//!   1. Replace bincode serialisation with serde_json
-//!   2. Remove ESDB_WAL binary magic header
-//!   3. Change each WAL entry to a NDJSON line (one JSON object per line)
-//!   4. Update hash computation to match Python: SHA256(canonical_json(event))
-//!   5. Verify cross-compatibility with Python ChronoStore via test_cross_project_wal_compatibility
-//!
-//! Tracked in: https://github.com/layer1labs/chronomemory/issues (WAL format unification)
+//! Hash computation matches Python:
+//! `hashlib.sha256(json.dumps({seq,ts,op,record_id,payload,prev_hash}, sort_keys=True).encode()).hexdigest()`
 
 use crate::types::EsdbId;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::collections::BTreeMap;
 use std::fs::{File, OpenOptions};
-use std::io::{BufReader, Read, Write};
+use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 
 // ---------------------------------------------------------------------------
 // WAL entry
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum EventType {
-    Insert,
-    Modify,
-    Invalidate,
-    Tombstone,
-    Rollback,
-    Checkpoint,
-    AddEdge,
-    RecordMetric,
-}
-
+/// A single WAL entry serialised as one NDJSON line.
+///
+/// Field names match Python's WalEvent exactly for cross-compatibility:
+/// seq, ts, op, record_id, record, prev_hash, hash, recursion_depth.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WalEntry {
     pub seq: u64,
-    pub timestamp: DateTime<Utc>,
-    pub event_type: EventType,
-    pub record_id: EsdbId,
-    pub payload: Vec<u8>,
-    pub prev_hash: [u8; 32],
-    pub hash: [u8; 32],
+    pub ts: String,
+    pub op: String,
+    pub record_id: String,
+    /// The record payload (named 'record' to match Python WalEvent.record)
+    pub record: serde_json::Value,
+    pub prev_hash: String,
+    pub hash: String,
+    #[serde(default)]
+    pub recursion_depth: u64,
 }
 
 impl WalEntry {
-    fn compute_hash(prev_hash: &[u8; 32], payload: &[u8]) -> [u8; 32] {
+    /// Compute the canonical hash for a WAL entry.
+    ///
+    /// Exactly matches Python's WalEvent.compute_hash():
+    /// `SHA256(json.dumps({seq,ts,op,record_id,record,prev_hash,recursion_depth}, sort_keys=True))`
+    pub fn compute_hash(
+        seq: u64,
+        ts: &str,
+        op: &str,
+        record_id: &str,
+        record: &serde_json::Value,
+        prev_hash: &str,
+        recursion_depth: u64,
+    ) -> String {
+        let mut map: BTreeMap<&str, serde_json::Value> = BTreeMap::new();
+        map.insert("seq", serde_json::json!(seq));
+        map.insert("ts", serde_json::json!(ts));
+        map.insert("op", serde_json::json!(op));
+        map.insert("record_id", serde_json::json!(record_id));
+        map.insert("record", record.clone());
+        map.insert("prev_hash", serde_json::json!(prev_hash));
+        map.insert("recursion_depth", serde_json::json!(recursion_depth));
+        let canonical =
+            serde_json::to_string(&map).expect("BTreeMap<&str,Value> always serialises");
         let mut hasher = Sha256::new();
-        hasher.update(prev_hash);
-        hasher.update(payload);
-        hasher.finalize().into()
+        hasher.update(canonical.as_bytes());
+        hex::encode(hasher.finalize())
     }
 }
-
-// ---------------------------------------------------------------------------
-// WAL magic header
-// ---------------------------------------------------------------------------
-
-const WAL_MAGIC: &[u8; 8] = b"ESDB_WAL";
-const WAL_VERSION: u32 = 1;
 
 // ---------------------------------------------------------------------------
 // WAL writer
@@ -75,42 +77,26 @@ const WAL_VERSION: u32 = 1;
 pub struct WalWriter {
     path: PathBuf,
     seq: u64,
-    prev_hash: [u8; 32],
+    prev_hash: String,
 }
 
 impl WalWriter {
-    /// Open or create a WAL file.
+    /// Open or create an NDJSON WAL file.
     pub fn open(path: impl AsRef<Path>) -> Result<Self, WalError> {
         let path = path.as_ref().to_path_buf();
-
         if path.exists() {
-            // Read existing WAL to get last seq + hash
             let reader = WalReader::open(&path)?;
-            let entries = reader.read_all()?;
-            let (seq, prev_hash) = if let Some(last) = entries.last() {
-                (last.seq, last.hash)
-            } else {
-                (0, [0u8; 32])
-            };
-            Ok(Self {
-                path,
-                seq,
-                prev_hash,
-            })
+            let (seq, prev_hash) = reader.last_seq_and_hash()?;
+            Ok(Self { path, seq, prev_hash })
         } else {
-            // Create new WAL with header
             if let Some(parent) = path.parent() {
                 std::fs::create_dir_all(parent).map_err(WalError::Io)?;
             }
-            let mut file = File::create(&path).map_err(WalError::Io)?;
-            file.write_all(WAL_MAGIC).map_err(WalError::Io)?;
-            file.write_all(&WAL_VERSION.to_le_bytes())
-                .map_err(WalError::Io)?;
-            file.flush().map_err(WalError::Io)?;
+            File::create(&path).map_err(WalError::Io)?;
             Ok(Self {
                 path,
                 seq: 0,
-                prev_hash: [0u8; 32],
+                prev_hash: String::new(),
             })
         }
     }
@@ -118,34 +104,41 @@ impl WalWriter {
     /// Append an event to the WAL.
     pub fn append(
         &mut self,
-        event_type: EventType,
-        record_id: EsdbId,
-        payload: &[u8],
+        op: &str,
+        record_id: &EsdbId,
+        record: serde_json::Value,
     ) -> Result<WalEntry, WalError> {
         self.seq += 1;
-        let hash = WalEntry::compute_hash(&self.prev_hash, payload);
+        let ts = Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
+        let record_id_str = record_id.to_string();
+        let recursion_depth: u64 = 0;
+        let hash = WalEntry::compute_hash(
+            self.seq,
+            &ts,
+            op,
+            &record_id_str,
+            &record,
+            &self.prev_hash,
+            recursion_depth,
+        );
         let entry = WalEntry {
             seq: self.seq,
-            timestamp: Utc::now(),
-            event_type,
-            record_id,
-            payload: payload.to_vec(),
-            prev_hash: self.prev_hash,
-            hash,
+            ts,
+            op: op.to_owned(),
+            record_id: record_id_str,
+            record,
+            prev_hash: self.prev_hash.clone(),
+            hash: hash.clone(),
+            recursion_depth,
         };
-
-        let encoded = bincode::serialize(&entry).map_err(WalError::Encode)?;
-        let len = (encoded.len() as u32).to_le_bytes();
-
+        let line = serde_json::to_string(&entry).map_err(WalError::Serialize)?;
         let mut file = OpenOptions::new()
             .append(true)
             .open(&self.path)
             .map_err(WalError::Io)?;
-
-        file.write_all(&len).map_err(WalError::Io)?;
-        file.write_all(&encoded).map_err(WalError::Io)?;
+        file.write_all(line.as_bytes()).map_err(WalError::Io)?;
+        file.write_all(b"\n").map_err(WalError::Io)?;
         file.flush().map_err(WalError::Io)?;
-
         self.prev_hash = hash;
         Ok(entry)
     }
@@ -154,8 +147,8 @@ impl WalWriter {
         self.seq
     }
 
-    pub fn prev_hash(&self) -> [u8; 32] {
-        self.prev_hash
+    pub fn prev_hash(&self) -> &str {
+        &self.prev_hash
     }
 }
 
@@ -176,51 +169,55 @@ impl WalReader {
         Ok(Self { path })
     }
 
-    /// Read all entries from the WAL.
+    /// Read all valid NDJSON entries, silently skipping blank lines and malformed JSON.
     pub fn read_all(&self) -> Result<Vec<WalEntry>, WalError> {
         let file = File::open(&self.path).map_err(WalError::Io)?;
-        let mut reader = BufReader::new(file);
-
-        // Read and verify header
-        let mut magic = [0u8; 8];
-        reader.read_exact(&mut magic).map_err(WalError::Io)?;
-        if &magic != WAL_MAGIC {
-            return Err(WalError::InvalidMagic);
-        }
-        let mut ver_bytes = [0u8; 4];
-        reader.read_exact(&mut ver_bytes).map_err(WalError::Io)?;
-
+        let reader = BufReader::new(file);
         let mut entries = Vec::new();
-        loop {
-            let mut len_bytes = [0u8; 4];
-            match reader.read_exact(&mut len_bytes) {
-                Ok(()) => {}
-                Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => break,
-                Err(e) => return Err(WalError::Io(e)),
+        for line in reader.lines() {
+            let line = line.map_err(WalError::Io)?;
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
+                continue;
             }
-            let len = u32::from_le_bytes(len_bytes) as usize;
-            let mut buf = vec![0u8; len];
-            reader.read_exact(&mut buf).map_err(WalError::Io)?;
-            let entry: WalEntry = bincode::deserialize(&buf).map_err(WalError::Decode)?;
-            entries.push(entry);
+            if let Ok(entry) = serde_json::from_str::<WalEntry>(trimmed) {
+                entries.push(entry);
+            }
         }
-
         Ok(entries)
     }
 
-    /// Verify the hash chain integrity (Invariant 8).
+    /// Return the last (seq, hash) without materialising all payloads.
+    pub fn last_seq_and_hash(&self) -> Result<(u64, String), WalError> {
+        let entries = self.read_all()?;
+        if let Some(last) = entries.last() {
+            Ok((last.seq, last.hash.clone()))
+        } else {
+            Ok((0, String::new()))
+        }
+    }
+
+    /// Verify the SHA-256 hash chain.
     pub fn verify_chain(&self) -> Result<bool, WalError> {
         let entries = self.read_all()?;
-        let mut expected_prev = [0u8; 32];
+        let mut prev_hash = String::new();
         for entry in &entries {
-            if entry.prev_hash != expected_prev {
+            if entry.prev_hash != prev_hash {
                 return Ok(false);
             }
-            let computed = WalEntry::compute_hash(&entry.prev_hash, &entry.payload);
-            if entry.hash != computed {
+            let expected = WalEntry::compute_hash(
+                entry.seq,
+                &entry.ts,
+                &entry.op,
+                &entry.record_id,
+                &entry.record,
+                &entry.prev_hash,
+                entry.recursion_depth,
+            );
+            if entry.hash != expected {
                 return Ok(false);
             }
-            expected_prev = entry.hash;
+            prev_hash = entry.hash.clone();
         }
         Ok(true)
     }
@@ -233,13 +230,9 @@ impl WalReader {
 #[derive(Debug, thiserror::Error)]
 pub enum WalError {
     #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
+    Io(std::io::Error),
+    #[error("Serialisation error: {0}")]
+    Serialize(serde_json::Error),
     #[error("WAL not found: {0}")]
     NotFound(String),
-    #[error("Invalid WAL magic bytes")]
-    InvalidMagic,
-    #[error("Encode error: {0}")]
-    Encode(bincode::Error),
-    #[error("Decode error: {0}")]
-    Decode(bincode::Error),
 }

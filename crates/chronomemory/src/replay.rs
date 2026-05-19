@@ -5,7 +5,7 @@
 use crate::dependency::DepGraph;
 use crate::store::Store;
 use crate::types::*;
-use crate::wal::{EventType, WalEntry, WalReader};
+use crate::wal::{WalEntry, WalReader};
 
 /// Replay result.
 #[derive(Debug)]
@@ -30,37 +30,27 @@ pub fn replay_full(
     let mut count = 0u64;
 
     for entry in entries {
-        match entry.event_type {
-            EventType::Insert => {
-                if let Ok(record) = bincode::deserialize::<Record>(&entry.payload) {
+        match entry.op.as_str() {
+            "upsert" | "migrate" => {
+                if let Ok(record) = serde_json::from_value::<Record>(entry.record.clone()) {
                     store.upsert(record);
                 }
             }
-            EventType::Modify => {
-                if let Ok(record) = bincode::deserialize::<Record>(&entry.payload) {
-                    store.upsert(record);
+            "delete" | "invalidate" => {
+                // Parse record_id as EsdbId (UUID) if possible, else skip
+                if let Ok(uuid) = entry.record_id.parse::<uuid::Uuid>() {
+                    let id = EsdbId(uuid);
+                    store.invalidate(&id);
                 }
             }
-            EventType::Invalidate => {
-                store.invalidate(&entry.record_id);
-            }
-            EventType::Tombstone => {
-                if let Some(record) = store.get_mut(&entry.record_id) {
-                    record.status = RecordStatus::Tombstoned;
-                }
-            }
-            EventType::AddEdge => {
-                if let Ok(edge) = bincode::deserialize::<DepEdge>(&entry.payload) {
+            "add_edge" => {
+                if let Ok(edge) = serde_json::from_value::<DepEdge>(entry.record.clone()) {
                     dep_graph.add_edge(edge.from, edge.to, edge.edge_type);
                 }
             }
-            EventType::Rollback => {
-                // Rollback entries are informational — the individual
-                // Invalidate events handle the actual state changes.
-            }
-            EventType::Checkpoint | EventType::RecordMetric => {
-                // Checkpoints and metrics don't affect materialized state.
-            }
+            // rollback, metric, compact are informational — state already changed
+            // via individual invalidate/upsert events
+            _ => {}
         }
         count += 1;
     }
