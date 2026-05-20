@@ -411,6 +411,74 @@ fn test_low_confidence_rejected() {
     assert!(matches!(decision, ProjectionDecision::Reject { .. }));
 }
 
+// TEST-ESDB-021: Rust WAL is readable as NDJSON with Python-compatible hash
+#[test]
+fn test_rust_wal_ndjson_cross_compat() {
+    use chronomemory::wal::WalEntry;
+    let (dir, mut db) = temp_esdb();
+    db.commit(Record::new(RecordKind::Fact, "cross compat fact 1")).unwrap();
+    db.commit(Record::new(RecordKind::Fact, "cross compat fact 2")).unwrap();
+    db.add_edge(EsdbId::new(), EsdbId::new(), EdgeType::DependsOn)
+        .unwrap();
+
+    let wal_path = dir.path().join("test.esdb/events.wal");
+    let content = std::fs::read_to_string(&wal_path).unwrap();
+
+    let mut prev_hash = String::new();
+    let mut count = 0;
+    for line in content.lines().filter(|l| !l.trim().is_empty()) {
+        // 1. Every line must be valid JSON
+        let entry: serde_json::Value =
+            serde_json::from_str(line).expect("WAL line must be valid JSON");
+
+        // 2. All 8 cross-compat fields must be present
+        for field in &[
+            "seq",
+            "ts",
+            "op",
+            "record_id",
+            "record",
+            "prev_hash",
+            "hash",
+            "recursion_depth",
+        ] {
+            assert!(
+                entry.get(field).is_some(),
+                "WAL entry missing field: {field}\n  line: {line}"
+            );
+        }
+
+        // 3. prev_hash must chain correctly
+        assert_eq!(
+            entry["prev_hash"].as_str().unwrap(),
+            prev_hash,
+            "prev_hash linkage broken at seq={}",
+            entry["seq"]
+        );
+
+        // 4. Recompute hash using WalEntry::compute_hash (Python-compatible BTreeMap sort)
+        let expected_hash = WalEntry::compute_hash(
+            entry["seq"].as_u64().unwrap(),
+            entry["ts"].as_str().unwrap(),
+            entry["op"].as_str().unwrap(),
+            entry["record_id"].as_str().unwrap(),
+            &entry["record"],
+            entry["prev_hash"].as_str().unwrap(),
+            entry["recursion_depth"].as_u64().unwrap_or(0),
+        );
+        assert_eq!(
+            entry["hash"].as_str().unwrap(),
+            expected_hash,
+            "Hash mismatch at seq={} — would fail Python chain_valid()",
+            entry["seq"]
+        );
+
+        prev_hash = entry["hash"].as_str().unwrap().to_owned();
+        count += 1;
+    }
+    assert!(count >= 3, "Expected at least 3 WAL entries, got {count}");
+}
+
 // TEST-ESDB-020: Aggregate metrics
 #[test]
 fn test_aggregate_metrics() {
