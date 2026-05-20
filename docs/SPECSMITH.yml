@@ -1,8 +1,9 @@
 project: chronomemory
 type: python-library
-version: 0.1.0
-phase: inception
+version: 0.1.1
+phase: release
 owner: Layer1Labs Silicon, Inc. / BitConcepts, LLC.
+specsmith_version: "0.11.5"
 vcs_platform: github
 repo: https://github.com/layer1labs/chronomemory
 description: >
