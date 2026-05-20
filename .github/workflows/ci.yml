@@ -97,6 +97,59 @@ jobs:
       - name: cargo test
         run: cargo test --workspace
 
+  cross-compat:
+    name: Cross-compat round-trip (Rust ↔ Python)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install Python package
+        run: pip install -e .
+
+      - name: Build write_wal example
+        run: cargo build --example write_wal --manifest-path crates/chronomemory/Cargo.toml
+
+      # Direction 1: Rust writes WAL → Python chain_valid()
+      - name: "Rust→Python: write WAL with Rust ESDB"
+        run: ./target/debug/examples/write_wal /tmp/rust_compat 5
+      - name: "Rust→Python: Python chain_valid() on Rust-written WAL"
+        run: |
+          python - <<'EOF'
+          from pathlib import Path
+          from chronomemory import ChronoStore
+          store = ChronoStore(Path("/tmp/rust_compat"))
+          store.open()
+          assert store.chain_valid(), "Rust WAL failed Python chain_valid()"
+          print(f"Rust\u2192Python: {store.wal_seq()} entries validated \u2713")
+          store.close()
+          EOF
+
+      # Direction 2: Python writes WAL → Rust verify_chain()
+      - name: "Python→Rust: write WAL with Python ChronoStore"
+        run: |
+          python - <<'EOF'
+          from pathlib import Path
+          from chronomemory import ChronoStore, ChronoRecord
+          with ChronoStore(Path("/tmp/py_compat")) as store:
+              for i in range(5):
+                  store.upsert(ChronoRecord(
+                      id=f"PY-{i:03d}", kind="fact",
+                      label=f"py fact {i}", confidence=0.9,
+                  ))
+          print("Python WAL written to /tmp/py_compat/.chronomemory/events.wal")
+          EOF
+      - name: "Python→Rust: Rust verify_chain() on Python-written WAL"
+        run: |
+          CROSS_COMPAT_WAL=/tmp/py_compat/.chronomemory/events.wal \
+            cargo test --test cross_compat_py_to_rust \
+              --manifest-path crates/chronomemory/Cargo.toml \
+              -- --nocapture
+
   zero-deps:
     name: Verify zero runtime dependencies
     runs-on: ubuntu-latest
