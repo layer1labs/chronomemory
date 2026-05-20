@@ -63,3 +63,17 @@ This file records significant architectural decisions and governance events.
 - **REQs affected**: REQ-044,REQ-085
 - **Status**: complete
 - **Chain hash**: `b816949a95970750...`
+
+## 2026-05-20T10:49 — specsmith preflight accepted utterance "Commit cross-compat WAL test files (test_cross_compat.py + esdb_tests.rs TEST-ESDB-021), merge feature/phase4-cross-compat-wal-test into develop" (work_item_id=WI-03387058, confidence_target=0.7).
+- **Author**: specsmith
+- **Type**: preflight
+- **REQs affected**: REQ-085
+- **Status**: complete
+- **Chain hash**: `33bfd8143606fed1...`
+
+## 2026-05-20T10:49 — work_proposal WI-03387058: Commit cross-compat WAL test files (test_cross_compat.py + esdb_tests.rs TEST-ESDB-021), merge feature/phase4-cross-compat-wal-test into develop
+- **Author**: specsmith
+- **Type**: work_proposal
+- **REQs affected**: REQ-044,REQ-085
+- **Status**: complete
+- **Chain hash**: `b80cfe661861aa9d...`
