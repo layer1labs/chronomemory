@@ -83,7 +83,9 @@ def test_python_wal_has_all_cross_compat_fields(tmp_path: Path) -> None:
     hash, recursion_depth. Verifies Python produces the same schema.
     """
     with ChronoStore(tmp_path) as store:
-        store.upsert(ChronoRecord(id="COMPAT-001", kind="fact", label="cross compat", confidence=0.9))
+        store.upsert(
+            ChronoRecord(id="COMPAT-001", kind="fact", label="cross compat", confidence=0.9)
+        )
         store.upsert(ChronoRecord(id="COMPAT-002", kind="decision", label="architecture decision"))
         store.delete("COMPAT-001")
 

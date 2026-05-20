@@ -416,8 +416,10 @@ fn test_low_confidence_rejected() {
 fn test_rust_wal_ndjson_cross_compat() {
     use chronomemory::wal::WalEntry;
     let (dir, mut db) = temp_esdb();
-    db.commit(Record::new(RecordKind::Fact, "cross compat fact 1")).unwrap();
-    db.commit(Record::new(RecordKind::Fact, "cross compat fact 2")).unwrap();
+    db.commit(Record::new(RecordKind::Fact, "cross compat fact 1"))
+        .unwrap();
+    db.commit(Record::new(RecordKind::Fact, "cross compat fact 2"))
+        .unwrap();
     db.add_edge(EsdbId::new(), EsdbId::new(), EdgeType::DependsOn)
         .unwrap();
 
