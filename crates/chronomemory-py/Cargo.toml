@@ -12,7 +12,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 chronomemory = { path = "../chronomemory" }
-pyo3 = { version = "0.24", features = ["extension-module"] }
+pyo3 = { version = "0.28", features = ["extension-module"] }
 serde_json = "1"
 uuid = { version = "1", features = ["v4"] }
 
